@@ -33,28 +33,38 @@ app.secret_key = "ILoveFrogs"  # Obviously for testing don't hardcode this
 # Creating the main page
 @app.route("/")
 def index():
-    return "<p>Hello!</p>"
+    # Checking if you're already logged in
+    u_user = request.cookies.get("user")
+    u_auth = request.cookies.get("auth")
+    status = Check_Auth(u_user, u_auth)
+    if status:
+        return render_template("home.j2", t_user=u_user)
+    # If you're not logged in go to the log in menu
+    else:
+        flash("Please log in")
+        # Remove any existing cookies
+        user_redirect = redirect(url_for("show_login"))
+        user_redirect.set_cookie("user", "", expires=0)
+        user_redirect.set_cookie("auth", "", expires=0)
+        return user_redirect
 
 
 # Creating the user page
-@app.route("/user")
-@app.route("/user/<string:username>", methods=["GET", "POST"])
-def show_user(username=None):
-    if request.method == "GET":
-        print(f"User is getting {escape(username)}")
-
-        # Checking the users authentication
-        u_user = request.cookies.get("user")
-        u_auth = request.cookies.get("auth")
-        status = Check_Auth(u_user, u_auth)
-        if status:
-            return render_template("user.j2", t_user=username)
-        else:
-            flash("Unknown User or Incorrect Credentials")
-            return redirect(url_for("show_login"))
-    elif request.method == "POST":
-        print(f"User is posting {escape(username)}")
+@app.get("/user/<string:username>")
+def show_user(username):
+    # Checking the users authentication
+    u_user = request.cookies.get("user")
+    u_auth = request.cookies.get("auth")
+    status = Check_Auth(u_user, u_auth)
+    if status:
         return render_template("user.j2", t_user=username)
+    else:
+        flash("Unknown User or Incorrect Credentials")
+        # Remove any existing cookies
+        user_redirect = redirect(url_for("show_login"))
+        user_redirect.set_cookie("user", "", expires=0)
+        user_redirect.set_cookie("auth", "", expires=0)
+        return user_redirect
 
 
 # Creating the tracker page
@@ -72,30 +82,40 @@ def show_tracked_activity(username, activity):
 # Creating an interactive login page
 @app.route("/login")
 def show_login():
-    return render_template("login.j2")
+    # Checking if you're already logged in
+    u_user = request.cookies.get("user")
+    u_auth = request.cookies.get("auth")
+    status = Check_Auth(u_user, u_auth)
+    if not status:
+        # Remove any existing cookies
+        user_render = make_response(render_template("login.j2"))
+        user_render.set_cookie("user", "", expires=0)
+        user_render.set_cookie("auth", "", expires=0)
+        return user_render
+    else:
+        flash("You're already logged in")
+        return redirect(url_for("index"))
 
 
 # Handling login attempts very crudely
-@app.route("/login_attempt", methods=["POST"])
+@app.post("/login_attempt")
 def login_attempt():
-    if request.method == "POST":
-        test_u = request.form["user_box"]
-        test_p = request.form["pass_box"]
-        user = Check_User(test_u, test_p)
-        if user is not None:
-            # Generate auth
-            age_s = 60 * 60  # 1 hour
-            auth = Generate_Auth(test_u, test_p, age_s)
-            # Generate cookie
-            user_redirect = redirect(url_for("show_user", username=test_u))
-            user_redirect.set_cookie("user", test_u, max_age=age_s)
-            user_redirect.set_cookie("auth", auth, max_age=age_s)
-            return user_redirect
-        else:
-            # I don't have these implemented yet
-            flash("Unknown User or Incorrect Credentials")
-            return redirect(url_for("show_login"))
-    return "You shouldn't be here"
+    test_u = request.form["user_box"]
+    test_p = request.form["pass_box"]
+    user = Check_User(test_u, test_p)
+    if user is not None:
+        # Generate auth
+        age_s = 60 * 60  # 1 hour
+        auth = Generate_Auth(test_u, test_p, age_s)
+        # Generate cookie
+        user_redirect = redirect(url_for("show_user", username=test_u))
+        user_redirect.set_cookie("user", test_u, max_age=age_s)
+        user_redirect.set_cookie("auth", auth, max_age=age_s)
+        return user_redirect
+    else:
+        # I don't have these implemented yet, would probably actually want something in javascript so it doesn't delete their username every time
+        flash("Unknown User or Incorrect Credentials")
+        return redirect(url_for("show_login"))
 
 
 # test class just to store users
