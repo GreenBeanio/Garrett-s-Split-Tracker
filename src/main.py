@@ -23,6 +23,7 @@ from pydantic import BaseModel
 import typing
 import dataclasses
 import pymongo
+import requests
 
 # Creating the flask app
 app = Flask(__name__)
@@ -44,8 +45,8 @@ def index():
         flash("Please log in")
         # Remove any existing cookies
         user_redirect = redirect(url_for("show_login"))
-        user_redirect.set_cookie("user", "", expires=0)
-        user_redirect.set_cookie("auth", "", expires=0)
+        user_redirect.delete_cookie("user")
+        user_redirect.delete_cookie("auth")
         return user_redirect
 
 
@@ -62,8 +63,8 @@ def show_user(username):
         flash("Unknown User or Incorrect Credentials")
         # Remove any existing cookies
         user_redirect = redirect(url_for("show_login"))
-        user_redirect.set_cookie("user", "", expires=0)
-        user_redirect.set_cookie("auth", "", expires=0)
+        user_redirect.delete_cookie("user")
+        user_redirect.delete_cookie("auth")
         return user_redirect
 
 
@@ -89,8 +90,8 @@ def show_login():
     if not status:
         # Remove any existing cookies
         user_render = make_response(render_template("login.j2"))
-        user_render.set_cookie("user", "", expires=0)
-        user_render.set_cookie("auth", "", expires=0)
+        user_render.delete_cookie("user")
+        user_render.delete_cookie("auth")
         return user_render
     else:
         flash("You're already logged in")
@@ -118,6 +119,56 @@ def login_attempt():
         return redirect(url_for("show_login"))
 
 
+# Creating an interactive log out page
+@app.route("/logout", methods=["GET", "PUT"])
+def show_logout():
+    if request.method == "GET":
+        # Checking if you're already logged in
+        u_user = request.cookies.get("user")
+        u_auth = request.cookies.get("auth")
+        status = Check_Auth(u_user, u_auth)
+        if status:
+            return render_template("logout.j2")
+        else:
+            flash("You aren't logged in")
+            return redirect(url_for("show_login"))
+    elif request.method == "PUT":
+        # Get the json
+        # logout_data = request.get_json()
+        print("ZOO WEE")
+
+        # Delete the session
+        u_user = request.cookies.get("user")
+        del sessions[u_user]
+        # I think i'd want this to actually log out of the current session so not like this I'd also probably need to pass the session in
+        # Go to the log in
+        flash("You've been logged out")
+        return redirect(url_for("show_login"))
+
+
+# # Handling login outs very crudely
+# @app.post("/logout")
+# def show_logout():
+#     if request.method == "GET":
+#         # Checking if you're already logged in
+#         u_user = request.cookies.get("user")
+#         u_auth = request.cookies.get("auth")
+#         status = Check_Auth(u_user, u_auth)
+#         if status:
+#             return render_template("logout.j2")
+#         else:
+#             flash("You aren't logged in")
+#             return redirect(url_for("show_login"))
+#     elif request.method == "PUT":
+#         # Delete the session
+#         u_user = request.cookies.get("user")
+#         del sessions[u_user]
+#         # I think i'd want this to actually log out of the current session so not like this I'd also probably need to pass the session in
+#         # Go to the log in
+#         flash("You've been logged out")
+#         return redirect(url_for("show_login"))
+
+
 # test class just to store users
 class user_obj:
     def __init__(self, username: str, password: str):
@@ -143,7 +194,6 @@ sessions = {"false": "rhjaudfbasudfb"}
 def Check_User(username: str, password: str):
     for user in users:
         if user.username == username and user.password == password:
-            print("matched")
             return user
     return None
 

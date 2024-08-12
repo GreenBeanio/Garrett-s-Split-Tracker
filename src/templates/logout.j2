@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>Log Out</title>
+
+<script>
+// My JavaScript skills aren't great. I've been trying to figure out how I can
+// log out using just the cookies.
+function GetCookies() {
+    // Get cookies from the webpage
+    cookies = document.cookie;
+    split_cookies = cookies.split('; ');
+    // Create a map
+    cookieMap = new Map();
+    // Add the cookies to the map
+    for (i in split_cookies) {
+        cookie = split_cookies[i].split('=');
+        cookieMap.set(cookie[0], cookie[1]);
+    }
+    return cookieMap;
+}
+</script>
+
+</head>
+
+<body>
+<h1> Log out of  Garrett's Split Tracker </h1>
+<form method="POST" action="{{ url_for('show_logout')}}">
+    <input type="submit" name="b_log" value="Log Out">
+</form>
+</body>
+
+</html>
