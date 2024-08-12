@@ -120,7 +120,7 @@ def login_attempt():
 
 
 # Creating an interactive log out page
-@app.route("/logout", methods=["GET", "PUT"])
+@app.route("/logout", methods=["GET", "POST"])
 def show_logout():
     if request.method == "GET":
         # Checking if you're already logged in
@@ -128,45 +128,20 @@ def show_logout():
         u_auth = request.cookies.get("auth")
         status = Check_Auth(u_user, u_auth)
         if status:
-            return render_template("logout.j2")
+            return render_template("logout.j2", user_t=u_user, session_t=u_auth)
         else:
             flash("You aren't logged in")
             return redirect(url_for("show_login"))
-    elif request.method == "PUT":
-        # Get the json
-        # logout_data = request.get_json()
-        print("ZOO WEE")
-
+    elif request.method == "POST":
+        # Get the items we basically just sent. This is stupid, but it's the best I can think of with my JavaScript inexperience and tiredness.
+        test_u = request.form["user_box"]
+        test_a = request.form["session_box"]
         # Delete the session
-        u_user = request.cookies.get("user")
-        del sessions[u_user]
-        # I think i'd want this to actually log out of the current session so not like this I'd also probably need to pass the session in
+        del sessions[test_u]
+        # I think I'd want this to actually log out of the current session so not like this. I'd also probably need to pass the session in.
         # Go to the log in
         flash("You've been logged out")
         return redirect(url_for("show_login"))
-
-
-# # Handling login outs very crudely
-# @app.post("/logout")
-# def show_logout():
-#     if request.method == "GET":
-#         # Checking if you're already logged in
-#         u_user = request.cookies.get("user")
-#         u_auth = request.cookies.get("auth")
-#         status = Check_Auth(u_user, u_auth)
-#         if status:
-#             return render_template("logout.j2")
-#         else:
-#             flash("You aren't logged in")
-#             return redirect(url_for("show_login"))
-#     elif request.method == "PUT":
-#         # Delete the session
-#         u_user = request.cookies.get("user")
-#         del sessions[u_user]
-#         # I think i'd want this to actually log out of the current session so not like this I'd also probably need to pass the session in
-#         # Go to the log in
-#         flash("You've been logged out")
-#         return redirect(url_for("show_login"))
 
 
 # test class just to store users

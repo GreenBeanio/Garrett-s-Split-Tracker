@@ -7,6 +7,8 @@
 <script>
 // My JavaScript skills aren't great. I've been trying to figure out how I can
 // log out using just the cookies.
+// For now I've just gone and not used this and instead put it into readonly boxes.
+// It's really stupid, but I'm tired and it works for now.
 function GetCookies() {
     // Get cookies from the webpage
     cookies = document.cookie;
@@ -27,6 +29,10 @@ function GetCookies() {
 <body>
 <h1> Log out of  Garrett's Split Tracker </h1>
 <form method="POST" action="{{ url_for('show_logout')}}">
+    <label for="user_text">Username:</label><br>
+    <input type="text" id="user_text" name="user_box" value="{{user_t}}" readonly><br><br>
+    <label for="session_text">Session:</label><br>
+    <input type="text" id="session_text" name="session_box" value="{{ session_t}}" readonly><br><br>
     <input type="submit" name="b_log" value="Log Out">
 </form>
 </body>
