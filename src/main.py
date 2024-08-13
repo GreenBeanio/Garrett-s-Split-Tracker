@@ -26,9 +26,20 @@ import pymongo
 import requests
 
 # Test Users
-users = [UserObj("GreenBeanio", "test1"), UserObj("GreenBeanio2", "test2")]
+users = {
+    "GreenBeanio": UserObj(
+        "GreenBeanio",
+        "84679c2fbdb113bb3a61867f142081a79c700b4dad2680e1a5ea4c05ff6ac329",
+        "X//kaU\|8",
+    ),
+    "GreenBeanio2": UserObj(
+        "GreenBeanio2",
+        "db5e78f5168f306e2ab0d31f6c3c935653de13fb71e209d78fcfd10f4625db81",
+        "s/PD>!/h~adxyAGm",
+    ),
+}
 # Test sessions
-sessions = {"false": "rhjaudfbasudfb"}
+sessions = {}
 
 # Creating the flask app
 app = Flask(__name__)
@@ -55,6 +66,12 @@ def index():
         return user_redirect
 
 
+###
+# Note: huge problem is that right now seemingly if you authenticate a session for any user it'll let you go to any users page!
+# Just have it check you're going to your page or not. Something like that
+###
+
+
 # Creating the user page
 @app.get("/user/<string:username>")
 def showUser(username):
@@ -63,7 +80,19 @@ def showUser(username):
     u_auth = request.cookies.get("auth")
     status = checkAuth(u_user, u_auth, sessions)
     if status:
-        return render_template("user.j2", t_user=username)
+        # Check to make sure you're going to your own account and not someone else's like a bad boy.
+        if username == u_user:
+            return render_template("user.j2", t_user=username)
+        else:
+            # Temporary solution... this won't work because they could just edit the username in their cookies... I need to
+            # have it check the session auth for the username in question. I'm tired now though and it's time for bed. That's
+            # a problem for me to fix tomorrow.
+            # You know storing this as a cookie is probably a bad security idea, but I'm just trying to learn flask right now.
+            # Security for my personal project can come after I figure it out. I suppose I could store this data in the session
+            # object from flask, but I want it to be saved so they don't have to login again. You can set the session to not
+            # disappear though. Cookies may be foolish, but oh well. Pretty sure roblox uses one for session security and
+            # they surely know more than me.
+            return "Naughty Boy"
     else:
         flash("Unknown User or Incorrect Credentials")
         # Remove any existing cookies
@@ -108,11 +137,10 @@ def show_login():
 def login_attempt():
     test_u = request.form["user_box"]
     test_p = request.form["pass_box"]
-    user = checkUser(test_u, test_p, users)
-    if user is not None:
+    if checkLogin(test_u, test_p, users):
         # Generate auth
         age_s = 60 * 60  # 1 hour
-        auth = generateAuth(test_u, test_p, age_s, sessions)
+        auth = generateAuth(test_u, users, age_s, sessions)
         # Generate cookie
         user_redirect = redirect(url_for("showUser", username=test_u))
         user_redirect.set_cookie("user", test_u, max_age=age_s)
@@ -140,13 +168,52 @@ def show_logout():
     elif request.method == "POST":
         # Get the items we basically just sent. This is stupid, but it's the best I can think of with my JavaScript inexperience and tiredness.
         test_u = request.form["user_box"]
-        test_a = request.form["session_box"]
         # Delete the session
         del sessions[test_u]
         # I think I'd want this to actually log out of the current session so not like this. I'd also probably need to pass the session in.
         # Go to the log in
         flash("You've been logged out")
         return redirect(url_for("show_login"))
+
+
+# Creating an interactive account creations page
+@app.route("/new_user")
+def newUser():
+    # Checking if you're already logged in
+    u_user = request.cookies.get("user")
+    u_auth = request.cookies.get("auth")
+    status = checkAuth(u_user, u_auth, sessions)
+    if not status:
+        # Remove any existing cookies
+        user_render = make_response(render_template("new_user.j2"))
+        user_render.delete_cookie("user")
+        user_render.delete_cookie("auth")
+        return user_render
+    else:
+        flash("You're already logged in")
+        return redirect(url_for("index"))
+
+
+# Handling attempts to create users very crudely
+@app.post("/create_attempt")
+def create_attempt():
+    test_u = request.form["user_box"]
+    test_p = request.form["pass_box"]
+    # Check if the user doesn't already exist
+    if not checkUser(test_u, users):
+        # Generate a new user and their salt
+        createUser(test_u, test_p, createSalt(), users)
+        # Generate auth for the new user
+        age_s = 60 * 60  # 1 hour
+        auth = generateAuth(test_u, users, age_s, sessions)
+        # Generate cookie
+        user_redirect = redirect(url_for("showUser", username=test_u))
+        user_redirect.set_cookie("user", test_u, max_age=age_s)
+        user_redirect.set_cookie("auth", auth, max_age=age_s)
+        return user_redirect
+    else:
+        flash("User already exists")
+        return redirect(url_for("index"))
 
 
 # Testing the urls

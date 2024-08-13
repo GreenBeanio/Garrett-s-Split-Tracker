@@ -6,9 +6,10 @@ import datetime
 
 # test class just to store users
 class UserObj:
-    def __init__(self, username: str, password: str):
+    def __init__(self, username: str, hash_pass: str, salt: str):
         self.username = username
-        self.password = password
+        self.hash_pass = hash_pass
+        self.salt = salt
 
 
 # Test class to store sessions for authentication
