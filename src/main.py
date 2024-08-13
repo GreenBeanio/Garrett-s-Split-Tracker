@@ -228,3 +228,7 @@ with app.test_request_context():
 
 # Creating a test static file for css
 # url_for("static", filename="style.css")
+
+# Start the app
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=True)
