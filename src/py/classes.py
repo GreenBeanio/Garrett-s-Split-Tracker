@@ -2,6 +2,7 @@
 
 # Package Imports
 import datetime
+from pymongo import MongoClient
 
 
 # test class just to store users
@@ -18,3 +19,22 @@ class UserAuth:
         self.user = user
         self.auth = auth
         self.exp = exp
+
+
+# Class to store the config information
+class Config:
+    def __init__(
+        self,
+        secret_key: str,
+        mongo_addr: str,
+        user: str,
+        passwd: str,
+        mongo_port: str,
+        mongo_con: MongoClient,
+    ):
+        self.secret_key = secret_key
+        self.mongo_addr = mongo_addr
+        self.user = user
+        self.passwd = passwd
+        self.mongo_port = mongo_port
+        self.mongo_con = mongo_con

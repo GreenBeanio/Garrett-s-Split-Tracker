@@ -22,8 +22,18 @@ import matplotlib
 from pydantic import BaseModel
 import typing
 import dataclasses
-import pymongo
+from pymongo import MongoClient
 import requests
+
+# Load the config
+app_config = loadCredentials(__file__)
+
+# Making a mongoclient right here for now to test
+mongo_client = MongoClient(
+    f"mongodb://{app_config.user}:{app_config.passwd}@{app_config.mongo_addr}:{app_config.mongo_port}"
+)  # add ", tls=true" when that is set up
+# Get the correct database
+mongo_client.get_database("split_tracker")
 
 # Test Users
 users = {
@@ -44,7 +54,7 @@ sessions = {}
 # Creating the flask app
 app = Flask(__name__)
 app.testing = True
-app.secret_key = "ILoveFrogs"  # Obviously for testing don't hardcode this
+app.secret_key = app_config.secret_key
 
 
 # Creating the main page

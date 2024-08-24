@@ -7,6 +7,11 @@ import hashlib
 import random
 import secrets
 import string
+import pymongo
+import json
+import os
+import sys
+import pathlib
 
 
 # Test to generate auth
@@ -47,6 +52,8 @@ def checkAuth(user: str, auth: str, sessions: dict) -> bool:
 
 # Test to check if a user exists
 def checkUser(username: str, users: dict) -> bool:
+    # New check user test!!!
+
     # Check the dictionary key (username string) to see if it matches
     for user in users:
         # If the username matches
@@ -95,6 +102,38 @@ def createUser(username: str, password: str, salt: str, users: dict) -> None:
     # Create the HashPass
     new_user = UserObj(username, createHashPass(password, salt), salt)
     users[username] = new_user
-    print(users[username].username)
-    print(users[username].hash_pass)
-    print(users[username].salt)
+
+
+# Function to load our credentials
+def loadCredentials(running_path) -> Config:
+    # Create the path to the settings (where the main script is running then getting the directory)
+    script_path = pathlib.Path(running_path).resolve().parent.resolve()
+    json_path = pathlib.Path.joinpath(script_path, "config.json")
+    # Load the file if it exists
+    if pathlib.Path.exists(json_path):
+        with open(json_path, "r") as file:
+            # Load the json
+            json_obj = json.load(file)
+            # Convert the json into a class (why not, probably better than a dictionary)
+            config_class = Config(
+                secret_key=json_obj["SECRET_KEY"],
+                mongo_addr=json_obj["MONGO_ADDRESS"],
+                user=json_obj["MONGO_USER"],
+                passwd=json_obj["MONGO_PASS"],
+                mongo_port=json_obj["MONGO_PORT"],
+            )
+            return config_class
+    else:
+        default_json = {
+            "SECRET_KEY": "YOUR_SECRET_KEY",
+            "MONGO_ADDRESS": "ADDRESS_TO_MONGO",
+            "MONGO_USER": "YOUR_MONGO_USER",
+            "MONGO_PASS": "YOUR_MONGO_PASSWORD",
+            "MONGO_PORT": "MONGO_PORT",
+        }
+        with open(json_path, "w+") as file:
+            json_obj = json.dumps(default_json, indent=4, sort_keys=False, default=str)
+            file.write(json_obj)
+        # Maybe not the bes idea, but it is what it is
+        sys.exit("Fill in the config file")
+    # Create the file if it doesn't
