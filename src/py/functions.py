@@ -51,15 +51,15 @@ def checkAuth(user: str, auth: str, sessions: dict) -> bool:
 
 
 # Test to check if a user exists
-def checkUser(username: str, users: dict) -> bool:
+def checkUser(username: str, config: Config) -> bool:
     # NEW_HERE: check user test!!!
-
-    # Check the dictionary key (username string) to see if it matches
-    for user in users:
-        # If the username matches
-        if user == username:
-            return True
-    return False
+    mongo_db_2 = config.mongo_con.get_database("split_tracker").get_collection("users")
+    result = mongo_db_2.find_one({"username": username})
+    # Check if there was a valid result (for a find_one, find is different)
+    if result is None:
+        return False
+    else:
+        return True
 
 
 # Test to check if a provided password matches that users HashPass
@@ -72,9 +72,9 @@ def checkHashPass(password: str, user: UserObj) -> bool:
 
 
 # Test if a user is logging in correctly
-def checkLogin(username: str, password: str, users: dict) -> bool:
+def checkLogin(username: str, password: str, users: dict, config: Config) -> bool:
     # Check if the user exists
-    if checkUser(username, users):
+    if checkUser(username, config):
         # Check if the password is correct by checking the HashPass
         if checkHashPass(password, users[username]):
             return True
@@ -105,23 +105,7 @@ def createUser(
     new_user = UserObj(username, createHashPass(password, salt), salt)
     users[username] = new_user
     # NEW_HERE: check user test!!!
-
-    # Create a mongoDB connection
-    # mongo_client = MongoClient(
-    #     f"mongodb://{config.user}:{config.passwd}@{config.mongo_addr}:{config.mongo_port}/?authSource=split_tracker"
-    # )
-    # mongo_db = mongo_client.get_database("split_tracker")
-    # mongo_col = mongo_db.get_collection("users")
-    # mongo_col.insert_one(
-    #     {
-    #         "username": username,
-    #         "hash_pass": createHashPass(password, salt),
-    #         "salt": salt,
-    #     }
-    # )
-    print(config.mongo_con)
     mongo_db_2 = config.mongo_con.get_database("split_tracker").get_collection("users")
-    print(mongo_db_2)
     mongo_db_2.insert_one(
         {
             "username": username,
@@ -132,7 +116,7 @@ def createUser(
 
 
 # Function to load our credentials
-def loadCredentials(running_path: pathlib.Path) -> dict:
+def loadCredentials(running_path: pathlib.Path) -> Config:
     # Create the path to the settings (where the main script is running then getting the directory)
     script_path = pathlib.Path(running_path).resolve().parent.resolve()
     json_path = pathlib.Path.joinpath(script_path, "config.json")

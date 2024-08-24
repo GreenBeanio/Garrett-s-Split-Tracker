@@ -140,7 +140,7 @@ def show_login():
 def login_attempt():
     test_u = request.form["user_box"]
     test_p = request.form["pass_box"]
-    if checkLogin(test_u, test_p, users):
+    if checkLogin(test_u, test_p, users, app_config):
         # Generate auth
         age_s = 60 * 60  # 1 hour
         auth = generateAuth(test_u, users, age_s, sessions)
@@ -203,7 +203,7 @@ def create_attempt():
     test_u = request.form["user_box"]
     test_p = request.form["pass_box"]
     # Check if the user doesn't already exist
-    if not checkUser(test_u, users):
+    if not checkUser(test_u, app_config):
         # Generate a new user and their salt
         createUser(test_u, test_p, createSalt(), users, app_config)
         # Generate auth for the new user
