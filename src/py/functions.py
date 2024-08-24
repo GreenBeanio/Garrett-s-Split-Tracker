@@ -106,24 +106,29 @@ def createUser(
     users[username] = new_user
     # NEW_HERE: check user test!!!
 
-    test = f"mongodb://{config.user}:{config.passwd}@{config.mongo_addr}:{config.mongo_port}"
-    print(test)
-
     # Create a mongoDB connection
-    mongo_client = MongoClient(
-        f"mongodb://{config.user}:{config.passwd}@{config.mongo_addr}:{config.mongo_port}/?authSource=split_tracker"
-    )
-    mongo_db = mongo_client.get_database("split_tracker")
-    mongo_col = mongo_db.get_collection("users")
-    mongo_col.insert_one(
+    # mongo_client = MongoClient(
+    #     f"mongodb://{config.user}:{config.passwd}@{config.mongo_addr}:{config.mongo_port}/?authSource=split_tracker"
+    # )
+    # mongo_db = mongo_client.get_database("split_tracker")
+    # mongo_col = mongo_db.get_collection("users")
+    # mongo_col.insert_one(
+    #     {
+    #         "username": username,
+    #         "hash_pass": createHashPass(password, salt),
+    #         "salt": salt,
+    #     }
+    # )
+    print(config.mongo_con)
+    mongo_db_2 = config.mongo_con.get_database("split_tracker").get_collection("users")
+    print(mongo_db_2)
+    mongo_db_2.insert_one(
         {
             "username": username,
             "hash_pass": createHashPass(password, salt),
             "salt": salt,
         }
     )
-
-    print(config.mongo_con)
 
 
 # Function to load our credentials
@@ -139,7 +144,7 @@ def loadCredentials(running_path: pathlib.Path) -> dict:
 
         # Create a mongoDB connection
         mongo_client = MongoClient(
-            f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource=split_tracker"'
+            f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource=split_tracker'
         )  # add ", tls=true" when that is set up
 
         # Convert the json into a class (why not, probably better than a dictionary)
