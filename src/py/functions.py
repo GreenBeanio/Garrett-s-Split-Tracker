@@ -52,7 +52,7 @@ def checkAuth(user: str, auth: str, sessions: dict) -> bool:
 
 # Test to check if a user exists
 def checkUser(username: str, users: dict) -> bool:
-    # New check user test!!!
+    # NEW_HERE: check user test!!!
 
     # Check the dictionary key (username string) to see if it matches
     for user in users:
@@ -98,14 +98,36 @@ def createHashPass(password: str, salt: str) -> str:
 
 
 # Function to create a new user (Doing this for later)
-def createUser(username: str, password: str, salt: str, users: dict) -> None:
+def createUser(
+    username: str, password: str, salt: str, users: dict, config: Config
+) -> None:
     # Create the HashPass
     new_user = UserObj(username, createHashPass(password, salt), salt)
     users[username] = new_user
+    # NEW_HERE: check user test!!!
+
+    test = f"mongodb://{config.user}:{config.passwd}@{config.mongo_addr}:{config.mongo_port}"
+    print(test)
+
+    # Create a mongoDB connection
+    mongo_client = MongoClient(
+        f"mongodb://{config.user}:{config.passwd}@{config.mongo_addr}:{config.mongo_port}/?authSource=split_tracker"
+    )
+    mongo_db = mongo_client.get_database("split_tracker")
+    mongo_col = mongo_db.get_collection("users")
+    mongo_col.insert_one(
+        {
+            "username": username,
+            "hash_pass": createHashPass(password, salt),
+            "salt": salt,
+        }
+    )
+
+    print(config.mongo_con)
 
 
 # Function to load our credentials
-def loadCredentials(running_path) -> Config:
+def loadCredentials(running_path: pathlib.Path) -> dict:
     # Create the path to the settings (where the main script is running then getting the directory)
     script_path = pathlib.Path(running_path).resolve().parent.resolve()
     json_path = pathlib.Path.joinpath(script_path, "config.json")
@@ -114,15 +136,25 @@ def loadCredentials(running_path) -> Config:
         with open(json_path, "r") as file:
             # Load the json
             json_obj = json.load(file)
-            # Convert the json into a class (why not, probably better than a dictionary)
-            config_class = Config(
-                secret_key=json_obj["SECRET_KEY"],
-                mongo_addr=json_obj["MONGO_ADDRESS"],
-                user=json_obj["MONGO_USER"],
-                passwd=json_obj["MONGO_PASS"],
-                mongo_port=json_obj["MONGO_PORT"],
-            )
-            return config_class
+
+        # Create a mongoDB connection
+        mongo_client = MongoClient(
+            f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource=split_tracker"'
+        )  # add ", tls=true" when that is set up
+
+        # Convert the json into a class (why not, probably better than a dictionary)
+        # Putting the mongodb connection in here may be very foolish. I might want to just connect multiple times.
+        config_class = Config(
+            secret_key=json_obj["SECRET_KEY"],
+            mongo_addr=json_obj["MONGO_ADDRESS"],
+            user=json_obj["MONGO_USER"],
+            passwd=json_obj["MONGO_PASS"],
+            mongo_port=json_obj["MONGO_PORT"],
+            mongo_con=mongo_client,
+            # I don't even really need to store the password, address, and user name if I only make the connection here. We'll see if I change that later.
+        )
+        return config_class
+    # Create a file if it doesn't exist
     else:
         default_json = {
             "SECRET_KEY": "YOUR_SECRET_KEY",
@@ -136,4 +168,3 @@ def loadCredentials(running_path) -> Config:
             file.write(json_obj)
         # Maybe not the bes idea, but it is what it is
         sys.exit("Fill in the config file")
-    # Create the file if it doesn't

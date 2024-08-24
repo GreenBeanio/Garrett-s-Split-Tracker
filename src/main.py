@@ -28,13 +28,6 @@ import requests
 # Load the config
 app_config = loadCredentials(__file__)
 
-# Making a mongoclient right here for now to test
-mongo_client = MongoClient(
-    f"mongodb://{app_config.user}:{app_config.passwd}@{app_config.mongo_addr}:{app_config.mongo_port}"
-)  # add ", tls=true" when that is set up
-# Get the correct database
-mongo_client.get_database("split_tracker")
-
 # Test Users
 users = {
     "GreenBeanio": UserObj(
@@ -212,7 +205,7 @@ def create_attempt():
     # Check if the user doesn't already exist
     if not checkUser(test_u, users):
         # Generate a new user and their salt
-        createUser(test_u, test_p, createSalt(), users)
+        createUser(test_u, test_p, createSalt(), users, app_config)
         # Generate auth for the new user
         age_s = 60 * 60  # 1 hour
         auth = generateAuth(test_u, users, age_s, sessions)
