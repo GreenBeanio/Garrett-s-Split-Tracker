@@ -40,10 +40,7 @@ from pymongo import MongoClient
 import requests
 
 # Create the apps
-app_temp = createFlaskApp(__file__, __name__)
-flask_app = app_temp["Flask"]
-celery_app = app_temp["Celery"]
-app_config = app_temp["Config"]
+flask_app, celery_app, app_config = createFlaskApp(__file__, __name__)
 
 
 # Creating the main page
@@ -214,6 +211,14 @@ def createAttempt():
         flash("User already exists")
         return redirect(url_for("index"))
 
+
+# Test out a celery task
+@celery_app.task
+def checkSessions():
+    print("hi")
+
+
+# task = checkSessions.delay()
 
 # Start the app
 if __name__ == "__main__":

@@ -26,6 +26,8 @@ def celeryInitApp(flask_app: Flask) -> Celery:
             with flask_app.app_context():
                 return self.run(*args, **kwargs)
 
+    print("HERE BOZOZ")
+    print(flask_app.name)
     celery_app = Celery(flask_app.name, task_cls=FlaskTask)
     celery_app.config_from_object(flask_app.config["CELERY"])
     celery_app.set_default()
@@ -34,18 +36,19 @@ def celeryInitApp(flask_app: Flask) -> Celery:
 
 
 # Creating the flask app
-def createFlaskApp(file: __file__, name: __name__) -> dict[Flask, Celery, Config]:
+def createFlaskApp(file: __file__, name: __name__) -> tuple[Flask, Celery, Config]:
     # Load the config
+    print(name)
     app_config = loadCredentials(file)  # Using the location of this main file
     # Creating the flask app
-    flask_app = Flask(__name__)
+    flask_app = Flask(name)
     flask_app.testing = True
     flask_app.secret_key = app_config.secret_key
     # Add the stuff for celery
     flask_app.config.from_mapping(CELERY=app_config.celery_dict)
     celery_app = celeryInitApp(flask_app)
     # Create the dictionary to return
-    return {"Flask": flask_app, "Celery": celery_app, "Config": app_config}
+    return (flask_app, celery_app, app_config)
 
 
 # Footer Comment

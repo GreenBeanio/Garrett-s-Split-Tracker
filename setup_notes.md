@@ -48,3 +48,6 @@ AUTH yourpassword
 You could also try
 ```config set requirepass yourpassword```
 but it seems to not be persistent when redis restarts
+
+# Celery
+Celery is a despicable module.
