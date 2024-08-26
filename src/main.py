@@ -26,23 +26,7 @@ from pymongo import MongoClient
 import requests
 
 # Load the config
-app_config = loadCredentials(__file__)
-
-# Test Users
-users = {
-    "GreenBeanio": UserObj(
-        "GreenBeanio",
-        "84679c2fbdb113bb3a61867f142081a79c700b4dad2680e1a5ea4c05ff6ac329",
-        "X//kaU\|8",
-    ),
-    "GreenBeanio2": UserObj(
-        "GreenBeanio2",
-        "db5e78f5168f306e2ab0d31f6c3c935653de13fb71e209d78fcfd10f4625db81",
-        "s/PD>!/h~adxyAGm",
-    ),
-}
-# Test sessions
-sessions = {}
+app_config = loadCredentials(__file__)  # Using the location of this main file
 
 # Creating the flask app
 app = Flask(__name__)
@@ -56,7 +40,7 @@ def index():
     # Checking if you're already logged in
     u_user = request.cookies.get("user")
     u_auth = request.cookies.get("auth")
-    status = checkAuth(u_user, u_auth, sessions)
+    status = checkAuth(u_user, u_auth, app_config)
     if status:
         return render_template("home.j2", t_user=u_user)
     # If you're not logged in go to the log in menu
@@ -81,8 +65,7 @@ def showUser(username):
     # Checking the users authentication
     u_user = request.cookies.get("user")
     u_auth = request.cookies.get("auth")
-    status = checkAuth(u_user, u_auth, sessions)
-    if status:
+    if checkAuth(u_user, u_auth, app_config):
         # Check to make sure you're going to your own account and not someone else's like a bad boy.
         if username == u_user:
             return render_template("user.j2", t_user=username)
@@ -120,16 +103,17 @@ def show_tracked_activity(username, activity):
 # Creating an interactive login page
 @app.route("/login")
 def show_login():
-    # Checking if you're already logged in
+    # Checking if you're already logged in (on their browser)
     u_user = request.cookies.get("user")
     u_auth = request.cookies.get("auth")
-    status = checkAuth(u_user, u_auth, sessions)
-    if not status:
+    # If the user isn't already logged in
+    if not checkAuth(u_user, u_auth, app_config):
         # Remove any existing cookies
         user_render = make_response(render_template("login.j2"))
         user_render.delete_cookie("user")
         user_render.delete_cookie("auth")
         return user_render
+    # If they are already logged in
     else:
         flash("You're already logged in")
         return redirect(url_for("index"))
@@ -138,15 +122,15 @@ def show_login():
 # Handling login attempts very crudely
 @app.post("/login_attempt")
 def login_attempt():
-    test_u = request.form["user_box"]
-    test_p = request.form["pass_box"]
-    if checkLogin(test_u, test_p, users, app_config):
+    user = request.form["user_box"]
+    passw = request.form["pass_box"]
+    if checkLogin(user, passw, app_config):
         # Generate auth
         age_s = 60 * 60  # 1 hour
-        auth = generateAuth(test_u, users, age_s, sessions)
+        auth = generateAuth(user, age_s, app_config)
         # Generate cookie
-        user_redirect = redirect(url_for("showUser", username=test_u))
-        user_redirect.set_cookie("user", test_u, max_age=age_s)
+        user_redirect = redirect(url_for("showUser", username=user))
+        user_redirect.set_cookie("user", user, max_age=age_s)
         user_redirect.set_cookie("auth", auth, max_age=age_s)
         return user_redirect
     else:
@@ -158,11 +142,11 @@ def login_attempt():
 # Creating an interactive log out page
 @app.route("/logout", methods=["GET", "POST"])
 def show_logout():
+    # Checking if you're already logged in
+    u_user = request.cookies.get("user")
+    u_auth = request.cookies.get("auth")
     if request.method == "GET":
-        # Checking if you're already logged in
-        u_user = request.cookies.get("user")
-        u_auth = request.cookies.get("auth")
-        status = checkAuth(u_user, u_auth, sessions)
+        status = checkAuth(u_user, u_auth, app_config)
         if status:
             return render_template("logout.j2", user_t=u_user, session_t=u_auth)
         else:
@@ -170,9 +154,9 @@ def show_logout():
             return redirect(url_for("show_login"))
     elif request.method == "POST":
         # Get the items we basically just sent. This is stupid, but it's the best I can think of with my JavaScript inexperience and tiredness.
-        test_u = request.form["user_box"]
+        user = request.form["user_box"]
         # Delete the session
-        del sessions[test_u]
+        removeSession(user, u_auth, app_config)
         # I think I'd want this to actually log out of the current session so not like this. I'd also probably need to pass the session in.
         # Go to the log in
         flash("You've been logged out")
@@ -185,7 +169,7 @@ def newUser():
     # Checking if you're already logged in
     u_user = request.cookies.get("user")
     u_auth = request.cookies.get("auth")
-    status = checkAuth(u_user, u_auth, sessions)
+    status = checkAuth(u_user, u_auth, app_config)
     if not status:
         # Remove any existing cookies
         user_render = make_response(render_template("new_user.j2"))
@@ -200,18 +184,18 @@ def newUser():
 # Handling attempts to create users very crudely
 @app.post("/create_attempt")
 def create_attempt():
-    test_u = request.form["user_box"]
-    test_p = request.form["pass_box"]
+    user = request.form["user_box"]
+    passw = request.form["pass_box"]
     # Check if the user doesn't already exist
-    if not checkUser(test_u, app_config):
+    if not checkUser(user, app_config):
         # Generate a new user and their salt
-        createUser(test_u, test_p, createSalt(), users, app_config)
+        createUser(user, passw, createSalt(), app_config)
         # Generate auth for the new user
         age_s = 60 * 60  # 1 hour
-        auth = generateAuth(test_u, users, age_s, sessions)
+        auth = generateAuth(user, age_s, app_config)
         # Generate cookie
-        user_redirect = redirect(url_for("showUser", username=test_u))
-        user_redirect.set_cookie("user", test_u, max_age=age_s)
+        user_redirect = redirect(url_for("showUser", username=user))
+        user_redirect.set_cookie("user", user, max_age=age_s)
         user_redirect.set_cookie("auth", auth, max_age=age_s)
         return user_redirect
     else:

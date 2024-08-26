@@ -15,51 +15,78 @@ import pathlib
 
 
 # Test to generate auth
-def generateAuth(username: str, users: dict, age_s: int, sessions: dict) -> str:
+def generateAuth(username: str, age_s: int, config: Config) -> str:
+    # Get the user information
+    user_info = getUser(username, config)
     # Creating the expiration date
     exp = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(
         seconds=age_s
     )
-    # Get a string of the current date time
+    # Get a string of the current date time (should I really include the password for this ... probably not, but it is a hash ...)
     auth = hashlib.sha256(
-        (str(exp) + username + users[username].hash_pass).encode("utf-8")
+        (str(exp) + username + user_info.hash_pass).encode("utf-8")
     ).hexdigest()
-    # Saving the auth
-    # In production I would add this to a database, technically I don't even need to add the user in the class because it's stored as the key
-    # Although it'd like to actually be able to have multiple sessions possibly. For if using on two devices. I suppose I could
-    # grab the session id from the database instead too.
-    sessions.update({username: UserAuth(username, auth, exp)})
+    # NEW_HERE: Saving the auth!!!
+    mongo_db = config.mongo_con.get_database("split_tracker").get_collection("sessions")
+    mongo_db.insert_one({"username": username, "auth": auth, "exp": exp})
     # Returning the auth for a cookie
     return auth
 
 
 # Test to check authentication
-def checkAuth(user: str, auth: str, sessions: dict) -> bool:
-    # Check all sessions to see if a user has a session
-    for s_user, s_auth in sessions.items():
-        # Checking this because I'd like to have multiple sessions per user in the future ... maybe
-        if s_user == user:
-            # From the session object check the auth cookie
-            if s_auth.auth == auth:
-                # Check if the session has expired or not
-                if s_auth.exp >= datetime.datetime.now(datetime.timezone.utc):
-                    return True
-                # If it isn't then delete the session
-                else:
-                    del sessions[s_user]
-    return False
+def checkAuth(user: str, auth: str, config: Config) -> bool:
+    # NEW_HERE: Getting the sessions from mongo!!!
+    mongo_db = config.mongo_con.get_database("split_tracker").get_collection("sessions")
+    # Check if there is a session
+    user_session = mongo_db.find_one({"username": user, "auth": auth})
+    # Check if there was a valid result
+    if user_session is None:
+        return False
+    else:
+        # Make the datetime timezone aware
+        user_dt = user_session["exp"].replace(tzinfo=datetime.timezone.utc)
+        # Turn it into a class (I want to)
+        user_s = UserAuth(user=user, auth=auth, exp=user_dt)
+        # Check if the session hasn't expired
+        if user_s.exp >= datetime.datetime.now(datetime.timezone.utc):
+            print("Good session")
+            return True
+        # If it has expired then delete the session
+        else:
+            print("removing!!!")
+            removeSession(user, auth, config)
+        return False
 
 
 # Test to check if a user exists
 def checkUser(username: str, config: Config) -> bool:
-    # NEW_HERE: check user test!!!
-    mongo_db_2 = config.mongo_con.get_database("split_tracker").get_collection("users")
-    result = mongo_db_2.find_one({"username": username})
+    # Query Mongo
+    mongo_db = config.mongo_con.get_database("split_tracker").get_collection("users")
+    result = mongo_db.find_one({"username": username})
     # Check if there was a valid result (for a find_one, find is different)
     if result is None:
         return False
     else:
         return True
+
+
+# Returns information about the user
+def getUser(username: str, config: Config) -> UserObj:
+    # Query Mongo
+    mongo_db = config.mongo_con.get_database("split_tracker").get_collection("users")
+    result = mongo_db.find_one({"username": username})
+    # Create UserObj from the response (because I want to)
+    user_obj = UserObj(
+        username=result["username"], hash_pass=result["hash_pass"], salt=result["salt"]
+    )
+    return user_obj
+
+
+# Removes a sessions (really probably only need the auth, but just to be sure I'll pass the username as well)
+def removeSession(username: str, auth: str, config: Config):
+    # Query Mongo
+    mongo_db = config.mongo_con.get_database("split_tracker").get_collection("sessions")
+    mongo_db.delete_one({"username": username, "auth": auth})
 
 
 # Test to check if a provided password matches that users HashPass
@@ -72,11 +99,13 @@ def checkHashPass(password: str, user: UserObj) -> bool:
 
 
 # Test if a user is logging in correctly
-def checkLogin(username: str, password: str, users: dict, config: Config) -> bool:
+def checkLogin(username: str, password: str, config: Config) -> bool:
     # Check if the user exists
     if checkUser(username, config):
+        # Get the user information
+        user_info = getUser(username, config)
         # Check if the password is correct by checking the HashPass
-        if checkHashPass(password, users[username]):
+        if checkHashPass(password, user_info):
             return True
     return False
 
@@ -98,15 +127,10 @@ def createHashPass(password: str, salt: str) -> str:
 
 
 # Function to create a new user (Doing this for later)
-def createUser(
-    username: str, password: str, salt: str, users: dict, config: Config
-) -> None:
-    # Create the HashPass
-    new_user = UserObj(username, createHashPass(password, salt), salt)
-    users[username] = new_user
-    # NEW_HERE: check user test!!!
-    mongo_db_2 = config.mongo_con.get_database("split_tracker").get_collection("users")
-    mongo_db_2.insert_one(
+def createUser(username: str, password: str, salt: str, config: Config) -> None:
+    # NEW_HERE: Saving the new user!!!
+    mongo_db = config.mongo_con.get_database("split_tracker").get_collection("users")
+    mongo_db.insert_one(
         {
             "username": username,
             "hash_pass": createHashPass(password, salt),
