@@ -12,7 +12,18 @@
 from py.create_apps import createFlaskApp
 from py.functions import loadCredentials
 
-flask_app = createFlaskApp(__name__, loadCredentials(__file__))
+# Load credentials
+cred = loadCredentials(__file__)
+
+# # Test redis
+# from redis import Redis
+
+# r = Redis.from_url(
+#     f"redis://ANY_USERNAME:{cred.redis_passwd}@{cred.redis_addr}:{cred.redis_port}"
+# )
+# print(r.ping())
+
+flask_app = createFlaskApp(__name__, cred)
 celery_app = flask_app.extensions["celery"]
 
 # Footer Comment
