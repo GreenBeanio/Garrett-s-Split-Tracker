@@ -11,18 +11,30 @@ Project Description: [This project is used to track "splits" in games or activit
 File Description: [Generates the user's page]
 #}
 
-<!DOCTYPE html>
-<html>
+{% extends "base.j2" %}
 
-<head>
-<title>User</title>
-</head>
+{%block css %}
+    {{ super() }}
+{% endblock %}
+{%block js %}
+    {{ super() }}
+{% endblock %}
 
-<body>
-<h1>Hello {{ t_user}}</h1>
-</body>
+{% block title %}
+   User
+{% endblock %}
 
-</html>
+{% block navigation_bar %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+    <h1>Hello {{ t_user}}</h1>
+{% endblock %}
+
+{% block footer %}
+    {{ super() }}
+{% endblock %}
 
 {# 
 Footer Comment

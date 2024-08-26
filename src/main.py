@@ -13,6 +13,7 @@
 # My imports
 from py.classes import *
 from py.functions import *
+from py.create_apps import createFlaskApp
 
 # Package Imports
 from flask import Flask
@@ -26,7 +27,8 @@ from flask import session
 from flask import redirect
 from flask import jsonify
 from flask import flash
-
+from celery import Celery
+from celery import Task
 
 # Future imports
 import pandas
@@ -37,17 +39,15 @@ import dataclasses
 from pymongo import MongoClient
 import requests
 
-# Load the config
-app_config = loadCredentials(__file__)  # Using the location of this main file
-
-# Creating the flask app
-app = Flask(__name__)
-app.testing = True
-app.secret_key = app_config.secret_key
+# Create the apps
+app_temp = createFlaskApp(__file__, __name__)
+flask_app = app_temp["Flask"]
+celery_app = app_temp["Celery"]
+app_config = app_temp["Config"]
 
 
 # Creating the main page
-@app.route("/")
+@flask_app.route("/")
 def index():
     # Checking if you're already logged in
     u_user = request.cookies.get("user")
@@ -59,7 +59,7 @@ def index():
     else:
         flash("Please log in")
         # Remove any existing cookies
-        user_redirect = redirect(url_for("show_login"))
+        user_redirect = redirect(url_for("showLogin"))
         user_redirect.delete_cookie("user")
         user_redirect.delete_cookie("auth")
         return user_redirect
@@ -72,7 +72,7 @@ def index():
 
 
 # Creating the user page
-@app.get("/user/<string:username>")
+@flask_app.get("/user/<string:username>")
 def showUser(username):
     # Checking the users authentication
     u_user = request.cookies.get("user")
@@ -94,27 +94,27 @@ def showUser(username):
     else:
         flash("Unknown User or Incorrect Credentials")
         # Remove any existing cookies
-        user_redirect = redirect(url_for("show_login"))
+        user_redirect = redirect(url_for("showLogin"))
         user_redirect.delete_cookie("user")
         user_redirect.delete_cookie("auth")
         return user_redirect
 
 
 # Creating the tracker page
-@app.route("/tracker/<string:username>")
-def show_tracker(username):
+@flask_app.route("/tracker/<string:username>")
+def showTracker(username):
     return f"User is {escape(username)}"
 
 
 # Creating the specific tracked activity page
-@app.route("/tracker/<string:username>/<string:activity>")
-def show_tracked_activity(username, activity):
+@flask_app.route("/tracker/<string:username>/<string:activity>")
+def showTrackedActivity(username, activity):
     return f"User is {escape(username)} for the activity {escape(activity)}"
 
 
 # Creating an interactive login page
-@app.route("/login")
-def show_login():
+@flask_app.route("/login")
+def showLogin():
     # Checking if you're already logged in (on their browser)
     u_user = request.cookies.get("user")
     u_auth = request.cookies.get("auth")
@@ -132,8 +132,8 @@ def show_login():
 
 
 # Handling login attempts very crudely
-@app.post("/login_attempt")
-def login_attempt():
+@flask_app.post("/loginAttempt")
+def loginAttempt():
     user = request.form["user_box"]
     passw = request.form["pass_box"]
     if checkLogin(user, passw, app_config):
@@ -148,12 +148,12 @@ def login_attempt():
     else:
         # I don't have these implemented yet, would probably actually want something in javascript so it doesn't delete their username every time
         flash("Unknown User or Incorrect Credentials")
-        return redirect(url_for("show_login"))
+        return redirect(url_for("showLogin"))
 
 
 # Creating an interactive log out page
-@app.route("/logout", methods=["GET", "POST"])
-def show_logout():
+@flask_app.route("/logout", methods=["GET", "POST"])
+def showLogout():
     # Checking if you're already logged in
     u_user = request.cookies.get("user")
     u_auth = request.cookies.get("auth")
@@ -163,7 +163,7 @@ def show_logout():
             return render_template("logout.j2", user_t=u_user, session_t=u_auth)
         else:
             flash("You aren't logged in")
-            return redirect(url_for("show_login"))
+            return redirect(url_for("showLogin"))
     elif request.method == "POST":
         # Get the items we basically just sent. This is stupid, but it's the best I can think of with my JavaScript inexperience and tiredness.
         user = request.form["user_box"]
@@ -172,11 +172,11 @@ def show_logout():
         # I think I'd want this to actually log out of the current session so not like this. I'd also probably need to pass the session in.
         # Go to the log in
         flash("You've been logged out")
-        return redirect(url_for("show_login"))
+        return redirect(url_for("showLogin"))
 
 
 # Creating an interactive account creations page
-@app.route("/new_user")
+@flask_app.route("/new_user")
 def newUser():
     # Checking if you're already logged in
     u_user = request.cookies.get("user")
@@ -194,8 +194,8 @@ def newUser():
 
 
 # Handling attempts to create users very crudely
-@app.post("/create_attempt")
-def create_attempt():
+@flask_app.post("/createAttempt")
+def createAttempt():
     user = request.form["user_box"]
     passw = request.form["pass_box"]
     # Check if the user doesn't already exist
@@ -215,22 +215,9 @@ def create_attempt():
         return redirect(url_for("index"))
 
 
-# Testing the urls
-with app.test_request_context():
-    print(url_for("index"))
-    print(url_for("showUser", username="GreenBeanio"))
-    print(url_for("show_tracker", username="GreenBeanio"))
-    print(
-        url_for("show_tracked_activity", username="GreenBeanio", activity="Programming")
-    )
-    print(url_for("login_attempt"))
-
-# Creating a test static file for css
-# url_for("static", filename="style.css")
-
 # Start the app
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    flask_app.run(host="0.0.0.0", port=5000, debug=True)
 
 # Footer Comment
 # History of Contributions:

@@ -38,17 +38,25 @@ class Config:
         self,
         secret_key: str,
         mongo_addr: str,
-        user: str,
-        passwd: str,
+        mongo_user: str,
+        mongo_passwd: str,
         mongo_port: str,
         mongo_con: MongoClient,
+        redis_addr: str,
+        redis_port: str,
+        redis_passwd: str,
+        celery_dict: dict,
     ):
         self.secret_key = secret_key
         self.mongo_addr = mongo_addr
-        self.user = user
-        self.passwd = passwd
+        self.user = mongo_user
+        self.passwd = mongo_passwd
         self.mongo_port = mongo_port
         self.mongo_con = mongo_con
+        self.redis_addr = redis_addr
+        self.redis_port = redis_port
+        self.redis_passwd = redis_passwd
+        self.celery_dict = celery_dict
 
 
 # Footer Comment

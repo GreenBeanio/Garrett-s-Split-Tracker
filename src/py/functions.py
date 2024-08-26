@@ -166,15 +166,29 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource=split_tracker'
         )  # add ", tls=true" when that is set up
 
+        # Create the celery dict
+        celery_dict = dict(
+            broker_url=f'redis://{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
+            result_backend=f'redis://{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
+            task_ignore_result=True,
+        )
+
         # Convert the json into a class (why not, probably better than a dictionary)
         # Putting the mongodb connection in here may be very foolish. I might want to just connect multiple times.
         config_class = Config(
+            # Secret key for flask
             secret_key=json_obj["SECRET_KEY"],
+            # Mongo config
             mongo_addr=json_obj["MONGO_ADDRESS"],
-            user=json_obj["MONGO_USER"],
-            passwd=json_obj["MONGO_PASS"],
             mongo_port=json_obj["MONGO_PORT"],
+            mongo_user=json_obj["MONGO_USER"],
+            mongo_passwd=json_obj["MONGO_PASS"],
             mongo_con=mongo_client,
+            # Celery/Redis config
+            redis_addr=json_obj["REDIS_ADDRESS"],
+            redis_port=json_obj["REDIS_PORT"],
+            redis_passwd=json_obj["REDIS_PASS"],
+            celery_dict=celery_dict,
             # I don't even really need to store the password, address, and user name if I only make the connection here. We'll see if I change that later.
         )
         return config_class
@@ -183,9 +197,12 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
         default_json = {
             "SECRET_KEY": "YOUR_SECRET_KEY",
             "MONGO_ADDRESS": "ADDRESS_TO_MONGO",
+            "MONGO_PORT": "MONGO_PORT",
             "MONGO_USER": "YOUR_MONGO_USER",
             "MONGO_PASS": "YOUR_MONGO_PASSWORD",
-            "MONGO_PORT": "MONGO_PORT",
+            "REDIS_ADDRESS": "ADDRESS_TO_REDIS",
+            "REDIS_PORT": "REDIS_PORT",
+            "REDIS_PASS": "YOUR_REDIS_PASSWORD",
         }
         with open(json_path, "w+") as file:
             json_obj = json.dumps(default_json, indent=4, sort_keys=False, default=str)

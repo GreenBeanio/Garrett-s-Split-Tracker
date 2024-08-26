@@ -11,22 +11,34 @@ Project Description: [This project is used to track "splits" in games or activit
 File Description: [Generates the home page]
 #}
 
-<!DOCTYPE html>
-<html>
+{% extends "base.j2" %}
 
-<head>
-<title>Garrett's Split Tracking System</title>
-</head>
+{%block css %}
+    {{ super() }}
+{% endblock %}
+{%block js %}
+    {{ super() }}
+{% endblock %}
 
-<body>
-{% if t_user %}
-    <h1>Hello {{ t_user}}</h1>
-{% else %}
-    <h1>You shouldn't be here<h1>
-{% endif %}
-</body>
+{% block title %}
+   Home
+{% endblock %}
 
-</html>
+{% block navigation_bar %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+    {% if t_user %}
+        <h1>Hello {{ t_user}}</h1>
+    {% else %}
+        <h1>You shouldn't be here<h1>
+    {% endif %}
+{% endblock %}
+
+{% block footer %}
+    {{ super() }}
+{% endblock %}
 
 {# 
 Footer Comment

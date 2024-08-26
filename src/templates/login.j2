@@ -11,30 +11,41 @@ Project Description: [This project is used to track "splits" in games or activit
 File Description: [Generates the login page]
 #}
 
-<!DOCTYPE html>
-<html>
+{% extends "base.j2" %}
 
-<head>
-<title>Login</title>
-</head>
+{%block css %}
+    {{ super() }}
+{% endblock %}
+{%block js %}
+    {{ super() }}
+{% endblock %}
 
-<body>
-<h1> Welcome to Garrett's Split Tracker </h1>
-<h2> Login </h2>
-<br>
-<div>
-<form method="POST" action="{{ url_for('login_attempt')}}">
-    <label for="user_text">Username:</label><br>
-    <input type="text" id="user_text" name="user_box"><br><br>
-    <label for="pass_text">Password:</label><br>
-    <input type="password" id="pass_text" name="pass_box"><br><br>
-    <input type="submit" id="submit_but" value="Login">
-    <input type="reset" id="reset_but" value="Reset">
-</form>
-</div>
-</body>
+{% block title %}
+   Login
+{% endblock %}
 
-</html>
+{% block navigation_bar %}
+    {{ super() }}
+{% endblock %}
+
+{% block content %}
+    <h2> Login </h2>
+    <div>
+        <form method="POST" action="{{ url_for('loginAttempt')}}">
+            <label for="user_text">Username:</label><br>
+            <input type="text" id="user_text" name="user_box"><br><br>
+            <label for="pass_text">Password:</label><br>
+            <input type="password" id="pass_text" name="pass_box"><br><br>
+            <input type="submit" id="submit_but" value="Login">
+            <input type="reset" id="reset_but" value="Reset">
+            <a href="{{url_for('newUser')}}">New User</a>
+        </form>
+    </div>
+{% endblock %}
+
+{% block footer %}
+    {{ super() }}
+{% endblock %}
 
 {# 
 Footer Comment

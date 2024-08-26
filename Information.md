@@ -15,6 +15,7 @@
 | CSS | 3 | NA | NA | Used for styling HTML |
 | Markdown | NA | NA | NA | Used for writing documentation |
 | Black | 24.8.0 |MIT License | [Link](https://pypi.org/project/black/) | Linter to format the code |
+| Redis Community Edition | 5.0.7 | Redis Source Available License v2 | [Link](https://redis.io/) | Used to communicate with Celery |
 
 # List of python packages used
 
