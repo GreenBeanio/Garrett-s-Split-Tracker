@@ -168,8 +168,8 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
 
         # Create the celery dict
         celery_dict = dict(
-            broker_url=f'redis://{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
-            result_backend=f'redis://{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
+            broker_url=f'redis://ANY_USERNAME:{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
+            result_backend=f'redis://ANY_USERNAME:{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
             task_ignore_result=True,
         )
 
@@ -178,6 +178,7 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
         config_class = Config(
             # Secret key for flask
             secret_key=json_obj["SECRET_KEY"],
+            testing=json_obj["TESTING"],
             # Mongo config
             mongo_addr=json_obj["MONGO_ADDRESS"],
             mongo_port=json_obj["MONGO_PORT"],
@@ -196,6 +197,7 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
     else:
         default_json = {
             "SECRET_KEY": "YOUR_SECRET_KEY",
+            "TESTING": "TRUE_OR_FALSE",
             "MONGO_ADDRESS": "ADDRESS_TO_MONGO",
             "MONGO_PORT": "MONGO_PORT",
             "MONGO_USER": "YOUR_MONGO_USER",

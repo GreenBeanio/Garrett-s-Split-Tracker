@@ -39,8 +39,12 @@ import dataclasses
 from pymongo import MongoClient
 import requests
 
+# Get the config
+app_config = loadCredentials(__file__)  # Using the location of this main file
+
 # Create the apps
-flask_app, celery_app, app_config = createFlaskApp(__file__, __name__)
+flask_app = createFlaskApp(__name__, app_config)
+celery_app = flask_app.extensions["celery"]
 
 
 # Creating the main page
@@ -218,7 +222,7 @@ def checkSessions():
     print("hi")
 
 
-# task = checkSessions.delay()
+task = checkSessions.delay()
 
 # Start the app
 if __name__ == "__main__":

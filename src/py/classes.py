@@ -37,6 +37,7 @@ class Config:
     def __init__(
         self,
         secret_key: str,
+        testing: bool,
         mongo_addr: str,
         mongo_user: str,
         mongo_passwd: str,
@@ -48,6 +49,7 @@ class Config:
         celery_dict: dict,
     ):
         self.secret_key = secret_key
+        self.testing = testing
         self.mongo_addr = mongo_addr
         self.user = mongo_user
         self.passwd = mongo_passwd
