@@ -222,7 +222,10 @@ def checkSessions():
     print("hi")
 
 
-task = checkSessions.delay()
+# Shit doesn't work with windows. Really fuck celery. And ubuntu has apt fucking down so I can't even upgrade my wsl. Clown shit.
+# All I wanted to do was use celery to check the sessions every minute or so and delete expired ones... I should've just done threading or multiprocessing at this point.
+# Hell I could've just had a damn script connecting to an endpoint every minute.
+# task = checkSessions.delay()
 
 # Start the app
 if __name__ == "__main__":
