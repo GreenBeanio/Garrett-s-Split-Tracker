@@ -36,3 +36,4 @@
 | Matplotlib | 3.9.1 | Python Software Foundation License | [Link](https://pypi.org/project/matplotlib/) | Data visualization |
 | Requests | 2.32.3 | Apache-2.0 license | [Link](https://pypi.org/project/requests/) | Making HTTP requests |
 | MarkupSafe | 2.1.5 | BSD-3-Clause license | [Link](https://pypi.org/project/MarkupSafe/) | Makes sure that text is HTML safe |
+| scikit-learn | 1.5.1 | BSD-3-Clause license | [Link](https://scikit-learn.org/) | Machine learning |

@@ -47,6 +47,20 @@ def createFlaskApp(name: __name__, config: Config) -> Flask:
     return flask_app
 
 
+# Creating the flask app (factory no passing name)
+def createFlaskApp2(config: Config) -> Flask:
+    # Load the config
+    # Creating the flask app
+    flask_app = Flask(__name__)
+    flask_app.config.update(Testing=config.testing, SECRET_KEY=config.secret_key)
+    # Add the stuff for celery
+    flask_app.config.from_mapping(CELERY=config.celery_dict)
+    flask_app.config.from_prefixed_env()
+    celeryInitApp(flask_app)
+    # Create the dictionary to return
+    return flask_app
+
+
 # Footer Comment
 # History of Contributions:
 # [2024-2024] - [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio] - [The entire document]

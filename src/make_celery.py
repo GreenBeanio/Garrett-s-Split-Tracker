@@ -9,7 +9,7 @@
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
 # File Description: [Creates the flask and celery apps.]
 
-from py.create_apps import createFlaskApp
+from py.create_apps import createFlaskApp2
 from py.functions import loadCredentials
 
 # Load credentials
@@ -23,7 +23,7 @@ cred = loadCredentials(__file__)
 # )
 # print(r.ping())
 
-flask_app = createFlaskApp(__name__, cred)
+flask_app = createFlaskApp2(cred)
 celery_app = flask_app.extensions["celery"]
 
 # Footer Comment

@@ -13,7 +13,9 @@
 # My imports
 from py.classes import *
 from py.functions import *
-from py.create_apps import createFlaskApp
+
+# from py.create_apps import createFlaskApp
+from py.create_apps import createFlaskApp2
 
 # Package Imports
 from flask import Flask
@@ -29,6 +31,8 @@ from flask import jsonify
 from flask import flash
 from celery import Celery
 from celery import Task
+from celery import shared_task
+from celery.result import AsyncResult
 
 # Future imports
 import pandas
@@ -43,8 +47,9 @@ import requests
 app_config = loadCredentials(__file__)  # Using the location of this main file
 
 # Create the apps
-flask_app = createFlaskApp(__name__, app_config)
-celery_app = flask_app.extensions["celery"]
+# flask_app = createFlaskApp(__name__, app_config)
+flask_app = createFlaskApp2(app_config)
+# celery_app: Celery = flask_app.extensions["celery"]
 
 
 # Creating the main page
@@ -217,10 +222,16 @@ def createAttempt():
 
 
 # Test out a celery task
-@celery_app.task
-def checkSessions():
-    print("hi")
+@shared_task(ignore_reslt=False)
+def checkSessions(x) -> string:
+    return x
 
+
+result = checkSessions.delay("hi")
+result_result = AsyncResult(result.id)
+print(result_result.ready())
+print(result_result.successful())
+print(result_result.result)
 
 # Shit doesn't work with windows. Really fuck celery. And ubuntu has apt fucking down so I can't even upgrade my wsl. Clown shit.
 # All I wanted to do was use celery to check the sessions every minute or so and delete expired ones... I should've just done threading or multiprocessing at this point.

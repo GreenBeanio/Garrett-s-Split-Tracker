@@ -4,18 +4,7 @@
 
 # Run Template
 
-## Windows
-
-- Initial Run
-  - cd /your/folder
-  - python3 -m venv env
-  - call env/Scripts/activate.bat
-  - python3 template.py
-- Running After
-  - cd /your/folder
-  - call env/Scripts/activate.bat && python3 template.py
-
-### Linux
+### Linux (Doesn't run on windows unless using wsl or docker!)
 
 - Initial Run
   - cd /your/folder
