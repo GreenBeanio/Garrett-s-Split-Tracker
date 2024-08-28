@@ -7,24 +7,17 @@
 # Author(s): [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Maintainer: [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
-# File Description: [Creates the flask and celery apps.]
+# File Description: [Description of file]
 
-from py.create_apps import createFlaskApp2
-from py.functions import loadCredentials
+# My imports
+from restructured.main import createFlaskApp
+from functions.load_credentials import loadCredentials
+from celery import Celery
 
-# Load credentials
-cred = loadCredentials(__file__)
-
-# # Test redis
-# from redis import Redis
-
-# r = Redis.from_url(
-#     f"redis://ANY_USERNAME:{cred.redis_passwd}@{cred.redis_addr}:{cred.redis_port}"
-# )
-# print(r.ping())
-
-flask_app = createFlaskApp2(cred)
-celery_app = flask_app.extensions["celery"]
+# Make a celery worker
+app_config = loadCredentials(__file__)  # Using the location of this main file
+flask_app = createFlaskApp(app_config)
+celery_app: Celery = flask_app.extensions["celery"]
 
 # Footer Comment
 # History of Contributions:
