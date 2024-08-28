@@ -7,7 +7,7 @@
 # Author(s): [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Maintainer: [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
-# File Description: [The main file to run flask and other core components.]
+# File Description: [The file holding the auth module blueprint]
 
 # Test import
 from stored_credentials import app_config

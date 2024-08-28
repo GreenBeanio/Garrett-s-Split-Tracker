@@ -21,7 +21,7 @@ from pymongo import MongoClient
 
 # Function to load our credentials
 def loadCredentials(running_path: pathlib.Path) -> Config:
-    print("uh oh tried again!!!!!!")
+    # print("uh oh tried again!!!!!!")
     # Create the path to the settings (where the main script is running then getting the directory)
     script_path = pathlib.Path(running_path).resolve().parent.resolve()
     json_path = pathlib.Path.joinpath(script_path, "config.json")

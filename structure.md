@@ -9,12 +9,12 @@
   - & Ignored by git
 
 - /Root: Everything (as well as misc files for now)
-  - /src: Original (going to remove)
   - /restructured: trying to tidy up the flask program for later
     - &@ config.json: The configuration file for the application
     - @requirements.txt: The requirements file for pip
     - @main.py: The main file to create the flask application factory
     - @make_celery.py: The file for creating celery workers
+    - @stored_credentials.py: A file holding a variable that stores the config information
     - /static: the main static directory for flask
       - /js: main directory for javascript
       - /css: main directory for css
@@ -31,8 +31,10 @@
       - @\_\_init\_\_.py: empty init file for a python module (not namespace module)
       - /classes: Directory for python classes
         - @\_\_init\_\_.py: empty init file for a python module (not namespace module)
+        - @auth_classes.py: The classes used in the auth module.
       - /functions: Directory for python functions
         - @\_\_init\_\_.py: empty init file for a python module (not namespace module)
+        - @auth_functions.py: The functions used in the auth module.
       - /static: Directory for flask static files
         - /css: Directory for css
           - @base.css: The basic css for the project

@@ -7,7 +7,7 @@
 # Author(s): [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Maintainer: [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
-# File Description: [A file holding the classes used in the application.]
+# File Description: [A file holding the classes used in the auth module]
 
 # Package Imports
 import datetime

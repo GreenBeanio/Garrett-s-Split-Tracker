@@ -11,7 +11,9 @@
 
 # My imports
 from classes.credentials import Config
-from functions.load_credentials import loadCredentials
+
+# from functions.load_credentials import loadCredentials
+from stored_credentials import app_config
 
 # My blueprints
 from auth.auth import auth_bp
@@ -71,7 +73,7 @@ def addBlueprints(app: Flask):
 
 
 # Get the config
-app_config = loadCredentials(__file__)  # Using the location of this main file
+# app_config = loadCredentials(__file__)  # Using the location of this main file
 
 # Create the apps
 # flask_app = createFlaskApp(__name__, app_config)
