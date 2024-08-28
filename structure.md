@@ -1,0 +1,60 @@
+# Structure of the project
+
+("#" meaning in progress)
+
+- Symbols
+  - / is a directory
+  - @ is a file
+  - ! Means it's being worked on
+  - & Ignored by git
+
+- /Root: Everything (as well as misc files for now)
+  - /src: Original (going to remove)
+  - /restructured: trying to tidy up the flask program for later
+    - &@ config.json: The configuration file for the application
+    - @requirements.txt: The requirements file for pip
+    - @main.py: The main file to create the flask application factory
+    - @make_celery.py: The file for creating celery workers
+    - /static: the main static directory for flask
+      - /js: main directory for javascript
+      - /css: main directory for css
+      - /html: main directory for html
+      - /images: main directory for images
+    - /templates: general templates
+    - /functions: General python functions
+      - @\_\_init\_\_.py: empty init file for a python module (not namespace module)
+      - @load_credentials.py: script to load the credentials
+    - /classes: general python classes
+      - @\_\_init\_\_.py: empty init file for a python module (not namespace module)
+      - @credentials.py: class to hold the credentials
+    - !/auth: the "module" for authorizing users
+      - @\_\_init\_\_.py: empty init file for a python module (not namespace module)
+      - /classes: Directory for python classes
+        - @\_\_init\_\_.py: empty init file for a python module (not namespace module)
+      - /functions: Directory for python functions
+        - @\_\_init\_\_.py: empty init file for a python module (not namespace module)
+      - /static: Directory for flask static files
+        - /css: Directory for css
+          - @base.css: The basic css for the project
+        - /js: Directory for javascript
+          - @cookies.js: A script to get the cookie information from the current webpage
+      - /templates: Directory for jinja templates
+        - @base.j2: The base template that is extended
+        - @home.j2: The template for a users home page
+        - @login.j2: The template for the log in page
+        - @logout.j2: The template for the log out page
+        - @new_user.j2: The template for creating a new user
+        - @user.j2: The template for displaying user information
+    - !/track: the "module" to handle tracking activities
+    - !/stats: the "module" to handle displaying the stats
+- !/docker: Stuff for docker in the future
+  - @docker-compose.yaml: Will be used for docker compose in the future
+  - /dockerfiles: Will be used to store dockerfiles for the various components in the future
+    - @python.dockerfile: The dockerfile to set up the container for handling python
+- @structure.md: Document trying to explain the structure
+- @setup_notes.md: notes on the setup process
+- @README.md: Main introduction to the project
+- @LICENSE: The license of this project
+- @NOTES.md: Random notes to remind myself
+- @Information.md: Information about the technology used in this project
+- @template.py: A template python file with the header comments
