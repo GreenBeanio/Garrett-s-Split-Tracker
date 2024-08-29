@@ -11,14 +11,14 @@ Project Description: [This project is used to track "splits" in games or activit
 File Description: [The main CSS]
 */
 
-/* For the navigation bar class */
-.navigation_bar {
+/* For the navigation bar object */
+#navigation_bar {
     background-color: royalblue;
     overflow: hidden;
 }
 
-/* For the navigation bar class hyperlink*/
-.navigation_bar a {
+/* For the navigation bar object hyperlink*/
+#navigation_bar a {
     float: left;
     color: lightblue;
     text-align: center;
@@ -27,19 +27,17 @@ File Description: [The main CSS]
     font-size: 17px;
 }
 
-/* For the navigation bar class hyperlink hover*/
-.navigation_bar a:hover {
+#navigation_bar a:hover {
     background-color: red;
     color: black;
 }
 
-/* For the navigation bar class hyperlink active*/
-.navigation_bar a:active {
+#navigation_bar a:active {
     background-color: purple;
     color: white;
 }
 
-/* For the id footer */
+/* For the id footer object */
 #footer {
     color: black;
     font: 12px;
@@ -53,7 +51,7 @@ File Description: [The main CSS]
     background-color: beige;
 }
 
-/* For hyperlinks in the footer */
+/* For hyperlinks in the footer object */
 #footer a {
     color: darkblue;
     text-align: center;
@@ -67,6 +65,11 @@ File Description: [The main CSS]
 
 #footer a:active {
     color: purple;
+}
+
+/* A class to center text */
+.centered_text {
+    text-align: center;
 }
 
 /*

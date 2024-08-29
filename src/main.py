@@ -22,6 +22,8 @@ from auth.auth import auth_bp
 from flask import Flask
 from celery import Celery
 from celery import Task
+from celery import shared_task
+from celery.result import AsyncResult
 
 
 # Creating the celery app (Straight from the Flask documentation, I don't understand celery yet)
@@ -33,7 +35,6 @@ def celeryInitApp(flask_app: Flask) -> Celery:
 
     celery_app = Celery(flask_app.name, task_cls=FlaskTask)
     celery_app.config_from_object(flask_app.config["CELERY"])
-    celery_app.set_default()
     flask_app.extensions["celery"] = celery_app
     return celery_app
 
@@ -58,6 +59,7 @@ def createFlaskApp(config: Config) -> Flask:
     # Creating the flask app
     flask_app = Flask(__name__)
     flask_app.config.update(Testing=config.testing, SECRET_KEY=config.secret_key)
+    # flask_app.config.update(SERVER_NAME="your_domain.com") # Not sure about this yet
     # Add the stuff for celery
     flask_app.config.from_mapping(CELERY=config.celery_dict)
     flask_app.config.from_prefixed_env()
@@ -80,6 +82,37 @@ def addBlueprints(app: Flask):
 flask_app = createFlaskApp(app_config)
 # celery_app: Celery = flask_app.extensions["celery"]
 
+
+##### Test Shit ####
+# Tring to get the beat to work
+celery_app: Celery = flask_app.extensions["celery"]
+
+
+@celery_app.on_after_configure.connect
+def setup_periodic(sender, **kwargs):
+    from auth.functions.auth_functions import removeExpiredSessions
+
+    sender.add_periodic_task(1, removeExpiredSessions.s(), name="please-god")
+    print("HIIIi")
+
+
+# Test out a celery task (Shit still doesn't work!)
+@shared_task(
+    ignore_result=False
+)  # , name="auth.functions.auth_functions.removeExpiredSessions"
+def checkSessions(x) -> str:
+    return x
+
+
+result = checkSessions.delay("hi")
+result_result = AsyncResult(result.id)
+print(result_result.ready())
+print(result_result.successful())
+print(result_result.result)
+print(result_result.get())
+
+##### End Test Shit ####
+
 # Add the blueprints
 flask_app_blue = addBlueprints(flask_app)
 
@@ -90,18 +123,8 @@ print(flask_app_blue.url_map)
 if __name__ == "__main__":
     flask_app_blue.run(host="0.0.0.0", port=5000, debug=True)
 
+# Run this with the cli commands "celery -A make_celery worker --loglevel INFO" and "celery -A make_celery beat --loglevel INFO"
+
 # Footer Comment
 # History of Contributions:
 # [2024-2024] - [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio] - [The entire document]
-
-# Test out a celery task
-# @shared_task(ignore_reslt=False)
-# def checkSessions(x) -> string:
-#     return x
-
-
-# result = checkSessions.delay("hi")
-# result_result = AsyncResult(result.id)
-# print(result_result.ready())
-# print(result_result.successful())
-# print(result_result.result)

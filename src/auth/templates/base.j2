@@ -24,9 +24,16 @@ File Description: [Generates the login page]
 
 <body>
     {% block navigation_bar %}
-    <div class="navigation_bar">
+    <div id="navigation_bar">
+        {# Always show the "Welcome" tab #}
         <a href="{{url_for('auth.index')}}">Welcome</a>
+        {# Show either the "Log In" or "User" tab #}
+        {% if not logged_in %}
         <a href="{{url_for('auth.showLogin')}}">Login</a>
+        {% else %}
+        <a href="{{url_for('auth.showUser', username=user)}}">User</a>
+        {% endif %}
+        {# Show the xxx tab #}
     </div>
     {% endblock %}
     {% block content%}

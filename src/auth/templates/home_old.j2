@@ -1,4 +1,4 @@
-{# 
+ {# 
 Header Comment 
 Project: [Garrett's Split Tracker] [https://github.com/GreenBeanio/Garrett-s-Split-Tracker]
 Copyright: Copyright (c) [2024]-[2024] [Garrett's Split Tracker] Contributors
@@ -8,7 +8,7 @@ License: [MIT]
 Author(s): [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 Maintainer: [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
-File Description: [Generates the logout page]
+File Description: [Generates the home page]
 #}
 
 {% extends "base.j2" %}
@@ -17,11 +17,11 @@ File Description: [Generates the logout page]
     {{ super() }}
 {% endblock %}
 {%block js %}
-    <script src="{{ url_for('static', filename='js/cookies.js') }}"></script>
+    {{ super() }}
 {% endblock %}
 
 {% block title %}
-   Log Out
+   Home
 {% endblock %}
 
 {% block navigation_bar %}
@@ -29,22 +29,16 @@ File Description: [Generates the logout page]
 {% endblock %}
 
 {% block content %}
-    <h1> Log out of  Garrett's Split Tracker </h1>
-    <div>
-        <form method="POST" action="{{url_for('auth.showLogout')}}">
-            <label for="user_text">Username:</label><br>
-            <input type="text" id="user_text" name="user_box" value="{{user}}" readonly><br><br>
-            <label for="session_text">Session:</label><br>
-            <input type="text" id="session_text" name="session_box" value="{{session}}" readonly><br><br>
-            <input type="submit" name="b_log" value="Log Out">
-        </form>
-    </div>
+    {% if t_user %}
+        <h1>Hello {{ t_user}}</h1>
+    {% else %}
+        <h1>You shouldn't be here<h1>
+    {% endif %}
 {% endblock %}
 
 {% block footer %}
     {{ super() }}
 {% endblock %}
-
 
 {# 
 Footer Comment

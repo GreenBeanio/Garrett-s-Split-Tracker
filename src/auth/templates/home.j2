@@ -21,7 +21,7 @@ File Description: [Generates the home page]
 {% endblock %}
 
 {% block title %}
-   Home
+   Welcome To Garrett's Split Tracker!
 {% endblock %}
 
 {% block navigation_bar %}
@@ -29,11 +29,10 @@ File Description: [Generates the home page]
 {% endblock %}
 
 {% block content %}
-    {% if t_user %}
-        <h1>Hello {{ t_user}}</h1>
-    {% else %}
-        <h1>You shouldn't be here<h1>
-    {% endif %}
+    <div class="centered_text">
+        <h1> Welcome! </h1>
+        <p> This is a website used to track "splits" in video games and display the tracked information.</p>
+    </div>
 {% endblock %}
 
 {% block footer %}

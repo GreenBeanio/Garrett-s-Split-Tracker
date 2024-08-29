@@ -19,6 +19,8 @@ import datetime
 import hashlib
 import secrets
 import string
+from flask import Request
+from typing import Tuple
 
 
 # Test to generate auth
@@ -142,6 +144,45 @@ def createUser(username: str, password: str, salt: str, config: Config) -> None:
             "salt": salt,
         }
     )
+
+
+# Function to get user auth cookie information
+def getUserAuthCookies(request: Request) -> Tuple[str, str]:
+    c_user = request.cookies.get("user")
+    c_auth = request.cookies.get("auth")
+    return (c_user, c_auth)
+
+
+# Function to get user auth cookie information and auth status
+def getUserAuthCookiesStatus(request: Request, config: Config) -> Tuple[str, bool]:
+    c_user = request.cookies.get("user")
+    c_auth = request.cookies.get("auth")
+    auth_status = checkAuth(c_user, c_auth, config)
+    return (c_user, auth_status)
+
+
+# Function to get auth status from request
+def getUserAuthStatus(request: Request, config: Config) -> bool:
+    c_user = request.cookies.get("user")
+    c_auth = request.cookies.get("auth")
+    auth_status = checkAuth(c_user, c_auth, config)
+    return auth_status
+
+
+# Function to remove expired sessions
+from celery import shared_task
+
+
+# Shit still doesn't work
+@shared_task(ignore_result=False)
+def removeExpiredSessions():
+    x = "YOSHI!"
+    print(x)
+    return x
+
+
+# # Check the celery task name
+# print(removeExpiredSessions.name)
 
 
 # Footer Comment
