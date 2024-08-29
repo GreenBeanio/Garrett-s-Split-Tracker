@@ -23,6 +23,7 @@ from auth.functions.auth_functions import checkUser
 from auth.functions.auth_functions import getUserAuthCookies
 from auth.functions.auth_functions import getUserAuthCookiesStatus
 from auth.functions.auth_functions import getUserAuthStatus
+from auth.functions.auth_functions import getUserAuthCookiesStatusFull
 
 # New Imports
 from flask import Blueprint
@@ -182,11 +183,10 @@ def loginAttempt():
 # Creating an interactive log out page
 @auth_bp.route("/logout", methods=["GET", "POST"])
 def showLogout():
-    # Checking if you're already logged in
-    c_user, c_auth = getUserAuthCookies(request)
     if request.method == "GET":
-        auth_status = checkAuth(c_user, c_auth, app_config)
-        if status:
+        # Checking if you're already logged in
+        c_user, c_auth, auth_status = getUserAuthCookiesStatusFull(request, app_config)
+        if auth_status:
             return render_template(
                 "logout.j2", logged_in=auth_status, user=c_user, session=c_auth
             )
@@ -194,8 +194,14 @@ def showLogout():
             flash("You aren't logged in")
             return redirect(url_for("auth.showLogin"))
     elif request.method == "POST":
+        # I wasn't checking for auth before on this because this shouldn't get called without auth, but just in case someone
+        # does some shenanigans and tries to call it directly. Even so if they were able to do it somehow it still wouldn't do anything
+        # besides try and remove a session.
+        c_user, c_auth, auth_status = getUserAuthCookiesStatusFull(request, app_config)
         # Get the items we basically just sent. This is stupid, but it's the best I can think of with my JavaScript inexperience and tiredness.
+        # Wait do I even need to do this? Shouldn't the cookies still be on this page?
         user = request.form["user_box"]
+        user = request.form["session_box"]
         # Delete the session
         removeSession(user, c_auth, app_config)
         # I think I'd want this to actually log out of the current session so not like this. I'd also probably need to pass the session in.

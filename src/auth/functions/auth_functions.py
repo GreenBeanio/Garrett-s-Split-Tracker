@@ -59,7 +59,9 @@ def checkAuth(user: str, auth: str, config: Config) -> bool:
         # Turn it into a class (I want to)
         user_s = UserAuth(user=user, auth=auth, exp=user_dt)
         # Check if the session hasn't expired
-        if user_s.exp >= datetime.datetime.now(datetime.timezone.utc):
+        if user_s.exp >= datetime.datetime.now(
+            datetime.datetime.now().astimezone().tzinfo
+        ):
             return True
         # If it has expired then delete the session
         else:
@@ -169,6 +171,16 @@ def getUserAuthStatus(request: Request, config: Config) -> bool:
     c_auth = request.cookies.get("auth")
     auth_status = checkAuth(c_user, c_auth, config)
     return auth_status
+
+
+# Function to get auth status from request
+def getUserAuthCookiesStatusFull(
+    request: Request, config: Config
+) -> Tuple[str, str, bool]:
+    c_user = request.cookies.get("user")
+    c_auth = request.cookies.get("auth")
+    auth_status = checkAuth(c_user, c_auth, config)
+    return (c_user, c_auth, auth_status)
 
 
 # Repeated task to remove expired sessions (currently running once an hour, if they try to connect with an expired session before that it'll be removed anyway)
