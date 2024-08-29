@@ -13,7 +13,7 @@
 from classes.credentials import Config
 
 # My Imports for celery beats
-import auth.functions.auth_functions
+# import auth.functions.auth_functions
 
 # Imports
 import json
@@ -45,14 +45,14 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             broker_url=f'redis://ANY_USERNAME:{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
             result_backend=f'redis://ANY_USERNAME:{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
             task_ignore_result=True,
-            # Beat schedule for timing repetitive events
+            # Beat schedule for timing repetitive events (You can set up the schedules in here like this too instead of with the functions)
             # "task-name" : {"task": "function", "schedule": time_in_seconds}
-            beat_schedule={
-                "task-every-minute": {
-                    "task": "auth.functions.auth_functions.removeExpiredSessions",
-                    "schedule": datetime.timedelta(seconds=1),
-                }
-            },
+            # beat_schedule={
+            #     "task-every-minute": {
+            #         "task": "auth.functions.auth_functions.removeExpiredSessions",
+            #         "schedule": datetime.timedelta(seconds=1),
+            #     }
+            # },
         )
 
         # Convert the json into a class (why not, probably better than a dictionary)
@@ -74,9 +74,7 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             celery_dict=celery_dict,
             # I don't even really need to store the password, address, and user name if I only make the connection here. We'll see if I change that later.
         )
-        print(
-            auth.functions.auth_functions.removeExpiredSessions.name
-        )  # TEMP: Checking celery
+        # print(auth.functions.auth_functions.removeExpiredSessions.name)  # TEMP: Checking celery
         return config_class
     # Create a file if it doesn't exist
     else:

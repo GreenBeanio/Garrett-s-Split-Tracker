@@ -22,8 +22,6 @@ from auth.auth import auth_bp
 from flask import Flask
 from celery import Celery
 from celery import Task
-from celery import shared_task
-from celery.result import AsyncResult
 
 
 # Creating the celery app (Straight from the Flask documentation, I don't understand celery yet)
@@ -35,22 +33,9 @@ def celeryInitApp(flask_app: Flask) -> Celery:
 
     celery_app = Celery(flask_app.name, task_cls=FlaskTask)
     celery_app.config_from_object(flask_app.config["CELERY"])
+    celery_app.set_default()  # Oh my god all my trouble was because I missed this line when I copied it in :cry:
     flask_app.extensions["celery"] = celery_app
     return celery_app
-
-
-# # Creating the flask app (factory)
-# def createFlaskApp(name: __name__, config: Config) -> Flask:
-#     # Load the config
-#     # Creating the flask app
-#     flask_app = Flask(name)
-#     flask_app.config.update(Testing=config.testing, SECRET_KEY=config.secret_key)
-#     # Add the stuff for celery
-#     flask_app.config.from_mapping(CELERY=config.celery_dict)
-#     flask_app.config.from_prefixed_env()
-#     celeryInitApp(flask_app)
-#     # Create the dictionary to return
-#     return flask_app
 
 
 # Creating the flask app (factory no passing name)
@@ -74,56 +59,32 @@ def addBlueprints(app: Flask):
     return app
 
 
-# Get the config
-# app_config = loadCredentials(__file__)  # Using the location of this main file
-
 # Create the apps
-# flask_app = createFlaskApp(__name__, app_config)
 flask_app = createFlaskApp(app_config)
+
+# If we want to use the celery app directly it's here
 # celery_app: Celery = flask_app.extensions["celery"]
 
+# Test function
+from auth.functions.auth_functions import removeExpiredSessions
 
-##### Test Shit ####
-# Tring to get the beat to work
-celery_app: Celery = flask_app.extensions["celery"]
-
-
-@celery_app.on_after_configure.connect
-def setup_periodic(sender, **kwargs):
-    from auth.functions.auth_functions import removeExpiredSessions
-
-    sender.add_periodic_task(1, removeExpiredSessions.s(), name="please-god")
-    print("HIIIi")
-
-
-# Test out a celery task (Shit still doesn't work!)
-@shared_task(
-    ignore_result=False
-)  # , name="auth.functions.auth_functions.removeExpiredSessions"
-def checkSessions(x) -> str:
-    return x
-
-
-result = checkSessions.delay("hi")
-result_result = AsyncResult(result.id)
-print(result_result.ready())
-print(result_result.successful())
-print(result_result.result)
-print(result_result.get())
-
-##### End Test Shit ####
+removeExpiredSessions()
 
 # Add the blueprints
 flask_app_blue = addBlueprints(flask_app)
 
-# Show the map
-print(flask_app_blue.url_map)
+# Show the blueprint map
+# print(flask_app_blue.url_map)
 
 # Start the flask app
 if __name__ == "__main__":
     flask_app_blue.run(host="0.0.0.0", port=5000, debug=True)
 
-# Run this with the cli commands "celery -A make_celery worker --loglevel INFO" and "celery -A make_celery beat --loglevel INFO"
+# Then un these cli commands (running flask first seems to matter, but the order of these 2 doesn't really,
+# but I start the beat first because the worker needs it):
+# "celery -A make_celery beat --loglevel INFO"
+# "celery -A make_celery worker --loglevel INFO"
+
 
 # Footer Comment
 # History of Contributions:
