@@ -75,7 +75,7 @@ auth_bp = Blueprint(
 
 
 # Creating the main page
-@auth_bp.route("/")
+@auth_bp.route("/user/")
 def index() -> None:
     # Get information about if the user is logged in
     c_user, auth_status = getUserAuthCookiesStatus(request, app_config)
@@ -117,20 +117,8 @@ def showUser(username):
         return user_redirect
 
 
-# Creating the tracker page
-@auth_bp.route("/tracker/<string:username>")
-def showTracker(username):
-    return f"User is {escape(username)}"
-
-
-# Creating the specific tracked activity page
-@auth_bp.route("/tracker/<string:username>/<string:activity>")
-def showTrackedActivity(username, activity):
-    return f"User is {escape(username)} for the activity {escape(activity)}"
-
-
 # Creating an interactive login page
-@auth_bp.route("/login")
+@auth_bp.route("/user/login")
 def showLogin():
     # Get information about if the user is logged in
     auth_status = getUserAuthStatus(request, app_config)
@@ -148,7 +136,7 @@ def showLogin():
 
 
 # Handling login attempts very crudely
-@auth_bp.post("/loginAttempt")
+@auth_bp.post("/user/loginAttempt")
 def loginAttempt():
     n_user = request.form["user_box"]
     n_passw = request.form["pass_box"]
@@ -175,7 +163,7 @@ def loginAttempt():
 
 
 # Creating an interactive log out page
-@auth_bp.route("/logout", methods=["GET", "POST"])
+@auth_bp.route("/user/logout", methods=["GET", "POST"])
 def showLogout():
     # Get cookie information
     c_user, c_auth, auth_status = getUserAuthCookiesStatusFull(request, app_config)
@@ -209,7 +197,7 @@ def showLogout():
 
 
 # Creating an interactive account creations page
-@auth_bp.route("/new_user")
+@auth_bp.route("/user/new_user")
 def newUser():
     # Get information about if the user is logged in
     auth_status = getUserAuthStatus(request, app_config)
@@ -227,7 +215,7 @@ def newUser():
 
 
 # Handling attempts to create users very crudely
-@auth_bp.post("/createAttempt")
+@auth_bp.post("/user/createAttempt")
 def createAttempt():
     user = request.form["user_box"]
     passw = request.form["pass_box"]
