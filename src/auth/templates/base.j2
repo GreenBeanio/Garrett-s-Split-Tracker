@@ -35,10 +35,9 @@ File Description: [Generates the login page]
             <div class="dropdown">
                 <a class="a-dropdown">User</a>
                 <div class="dropdown-items">
-                    <a href="{{url_for('auth.showUser', username=user)}}">1</a>
-                    <a href="{{url_for('auth.showUser', username=user)}}">2</a>
-                    <a href="{{url_for('auth.showUser', username=user)}}">3</a>
-                    <a href="{{url_for('auth.showUser', username=user)}}">4</a>
+                    <a href="{{url_for('auth.showUser', username=user)}}">User</a>
+                    <a href="">Profile</a>
+                    <a href="{{url_for('auth.showLogout')}}">Log Out</a>
                 </div>
             </div>
         {% endif %}
@@ -47,10 +46,8 @@ File Description: [Generates the login page]
             <div class="dropdown">
                 <a class="a-dropdown">Tracker</a>
                 <div class="dropdown-items">
-                    <a href="{{url_for('auth.showUser', username=user)}}">1</a>
-                    <a href="{{url_for('auth.showUser', username=user)}}">2</a>
-                    <a href="{{url_for('auth.showUser', username=user)}}">3</a>
-                    <a href="{{url_for('auth.showUser', username=user)}}">4</a>
+                    <a href="">Tracking</a>
+                    <a href="">Categories</a>
                 </div>
             </div>
         {% endif %}
@@ -59,10 +56,8 @@ File Description: [Generates the login page]
             <div class="dropdown">
                 <a class="a-dropdown">Display</a>
                 <div class="dropdown-items">
-                    <a href="{{url_for('auth.showUser', username=user)}}">1</a>
-                    <a href="{{url_for('auth.showUser', username=user)}}">2</a>
-                    <a href="{{url_for('auth.showUser', username=user)}}">3</a>
-                    <a href="{{url_for('auth.showUser', username=user)}}">4</a>
+                    <a href="">Counter</a>
+                    <a href="">Counter Config</a>
                 </div>
             </div>
         {% endif %}

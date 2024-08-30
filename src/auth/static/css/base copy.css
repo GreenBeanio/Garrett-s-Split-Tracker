@@ -17,9 +17,8 @@ File Description: [The main CSS]
     position: relative;
     display: flex;
     width: 100%;
-    padding: 0px;
-    margin: 0px;
     height: fit-content;
+    /* Might change this doesn't seem to do anything */
     justify-content: left;
     align-items: center;
 }
@@ -30,7 +29,6 @@ File Description: [The main CSS]
     color: lightblue;
     text-align: center;
     padding: 10px 10px;
-    margin: 0px;
     text-decoration: none;
     font-size: 17px;
 }
@@ -95,35 +93,30 @@ File Description: [The main CSS]
     cursor: pointer;
 }
 
+.dropdown:hover .a-dropdown {
+    background-color: red;
+    color: black;
+}
+
+.dropdown:hover .dropdown-items {
+    display: inline-flex;
+    flex-direction: column;
+    width: 100%;
+    height: fit-content;
+}
+
 .dropdown-items {
     display: none;
     position: absolute;
     background-color: maroon;
     z-index: 1;
-    width: fit-content;
-    height: fit-content
-}
-
-.dropdown:hover .a-dropdown {
-    background-color: blanchedalmond;
-    color: black;
-}
-
-.dropdown:hover .dropdown-items {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: fit-content;
-    justify-content: center;
-    margin-top: 40px;
-    /* Sadly I can't get this flush without using margins */
 }
 
 .dropdown-items a {
     color: black;
+    padding: 12px 12px;
     text-decoration: none;
-    display: flex;
-    justify-content: center;
+    display: block;
 }
 
 .dropdown-items a:hover {
