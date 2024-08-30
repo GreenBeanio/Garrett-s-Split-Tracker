@@ -26,7 +26,7 @@ File Description: [Generates the login page]
     {% block navigation_bar %}
     <div id="navigation-bar">
         {# Always show the "Welcome" tab #}
-        <a href="{{url_for('auth.index')}}">Welcome</a>
+        <a href="{{url_for('index')}}">Welcome</a>
         {# Show either the "Log In" or "User" options #}
         {% if not logged_in %}
             <a href="{{url_for('auth.showLogin')}}">Login</a>
@@ -46,7 +46,7 @@ File Description: [Generates the login page]
             <div class="dropdown">
                 <a class="a-dropdown">Tracker</a>
                 <div class="dropdown-items">
-                    <a href="">Tracking</a>
+                    <a href="{{url_for('tracker.showTracker', username=user)}}">Tracking</a>
                     <a href="">Categories</a>
                 </div>
             </div>

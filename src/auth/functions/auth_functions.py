@@ -37,7 +37,7 @@ def generateAuth(username: str, age_s: int, ip: str, config: Config) -> str:
     auth = hashlib.sha256(
         (str(exp) + username + user_info.hash_pass).encode("utf-8")
     ).hexdigest()
-    # NEW_HERE: Saving the auth!!!
+    # Saving the auth
     mongo_db = config.mongo_con.get_database("split_tracker").get_collection("sessions")
     mongo_db.insert_one({"username": username, "auth": auth, "ip": ip, "exp": exp})
     # Returning the auth for a cookie
@@ -46,7 +46,7 @@ def generateAuth(username: str, age_s: int, ip: str, config: Config) -> str:
 
 # Test to check authentication
 def checkAuth(user: str, auth: str, ip: str, config: Config) -> bool:
-    # NEW_HERE: Getting the sessions from mongo!!!
+    # Getting the sessions from mongo
     mongo_db = config.mongo_con.get_database("split_tracker").get_collection("sessions")
     # Check if there is a session
     user_session = mongo_db.find_one({"username": user, "auth": auth})
@@ -153,7 +153,7 @@ def createHashPass(password: str, salt: str) -> str:
 
 # Function to create a new user (Doing this for later)
 def createUser(username: str, password: str, salt: str, config: Config) -> None:
-    # NEW_HERE: Saving the new user!!!
+    # Saving the new user
     mongo_db = config.mongo_con.get_database("split_tracker").get_collection("users")
     mongo_db.insert_one(
         {
@@ -164,14 +164,14 @@ def createUser(username: str, password: str, salt: str, config: Config) -> None:
     )
 
 
-# Function to get user auth cookie information
+# Function to get user auth cookie information (The user and the auth, not the status)
 def getUserAuthCookies(request: Request) -> Tuple[str, str]:
     c_user = request.cookies.get("user")
     c_auth = request.cookies.get("auth")
     return (c_user, c_auth)
 
 
-# Function to get user auth cookie information and auth status
+# Function to get user auth cookie information and auth status (The user and the auth status)
 def getUserAuthCookiesStatus(request: Request, config: Config) -> Tuple[str, bool]:
     c_user = request.cookies.get("user")
     c_auth = request.cookies.get("auth")
@@ -179,7 +179,7 @@ def getUserAuthCookiesStatus(request: Request, config: Config) -> Tuple[str, boo
     return (c_user, auth_status)
 
 
-# Function to get auth status from request
+# Function to get auth status from request (Only if it's a authorized session)
 def getUserAuthStatus(request: Request, config: Config) -> bool:
     c_user = request.cookies.get("user")
     c_auth = request.cookies.get("auth")
@@ -187,7 +187,7 @@ def getUserAuthStatus(request: Request, config: Config) -> bool:
     return auth_status
 
 
-# Function to get auth status from request
+# Function to get auth status from request (If it's an authorized session, the user, and the auth status)
 def getUserAuthCookiesStatusFull(
     request: Request, config: Config
 ) -> Tuple[str, str, bool]:
@@ -195,6 +195,17 @@ def getUserAuthCookiesStatusFull(
     c_auth = request.cookies.get("auth")
     auth_status = checkAuth(c_user, c_auth, request.remote_addr, config)
     return (c_user, c_auth, auth_status)
+
+
+# Function to check if the have auth status AND it's the same user! (No shenanigans allowed!)
+def getUserAuthProper(request: Request, config: Config, search_user: str) -> bool:
+    c_user = request.cookies.get("user")
+    c_auth = request.cookies.get("auth")
+    auth_status = checkAuth(c_user, c_auth, request.remote_addr, config)
+    if auth_status and c_user == search_user:
+        return True
+    else:
+        return False
 
 
 # Repeated task to remove expired sessions (currently running once an hour, if they try to connect with an expired session before that it'll be removed anyway)

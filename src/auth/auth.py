@@ -9,7 +9,7 @@
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
 # File Description: [The file holding the auth module blueprint]
 
-# Test import
+# Import app config information
 from stored_credentials import app_config
 
 # My imports
@@ -122,7 +122,7 @@ def showLogin():
     # If they are already logged in
     else:
         flash("You're already logged in")
-        return redirect(url_for("auth.index"))
+        return redirect(url_for("index"))
 
 
 # Handling login attempts very crudely
@@ -201,7 +201,7 @@ def newUser():
         return user_render
     else:
         flash("You're already logged in")
-        return redirect(url_for("auth.index"))
+        return redirect(url_for("index"))
 
 
 # Handling attempts to create users very crudely
@@ -215,7 +215,9 @@ def createAttempt():
         createUser(user, passw, createSalt(), app_config)
         # Generate auth for the new user
         age_s = 60 * 60  # 1 hour
-        auth = generateAuth(user, age_s, request.remote_addr, app_config)
+        auth = generateAuth(
+            user, age_s, request.remote_addr, app_config
+        )  # Generate the new users auth with ip addr protection just in case
         # Generate cookie
         user_redirect = redirect(url_for("auth.showUser", username=user))
         user_redirect.set_cookie("user", user, max_age=age_s)
@@ -223,7 +225,7 @@ def createAttempt():
         return user_redirect
     else:
         flash("User already exists")
-        return redirect(url_for("auth.index"))
+        return redirect(url_for("index"))
 
 
 # Footer Comment

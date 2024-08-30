@@ -9,15 +9,17 @@
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
 # File Description: [Creates the flask and celery apps.]
 
-# My imports
-from classes.credentials import Config
-
 # from functions.load_credentials import loadCredentials
 from stored_credentials import app_config
 
+# My imports
+from classes.credentials import Config
+from auth.functions.auth_functions import getUserAuthCookiesStatus
+
 # My blueprints
 from auth.auth import auth_bp
-from auth.functions.auth_functions import getUserAuthCookiesStatus
+from tracker.tracker import tracker_bp
+
 
 # Package Imports
 from flask import Flask
@@ -59,6 +61,7 @@ def createFlaskApp(config: Config) -> Flask:
 # Add blueprints to the flask apt
 def addBlueprints(app: Flask):
     flask_app.register_blueprint(auth_bp)
+    flask_app.register_blueprint(tracker_bp)
     return app
 
 
@@ -67,11 +70,6 @@ flask_app = createFlaskApp(app_config)
 
 # If we want to use the celery app directly it's here
 # celery_app: Celery = flask_app.extensions["celery"]
-
-# Test function
-from auth.functions.auth_functions import removeExpiredSessions
-
-removeExpiredSessions()
 
 # Add the blueprints
 flask_app_blue = addBlueprints(flask_app)
