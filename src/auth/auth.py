@@ -69,19 +69,9 @@ auth_bp = Blueprint(
     template_folder="templates",
     static_folder="static",
     static_url_path="/static/auth",
-    # url_prefix="/auth",
+    url_prefix="/user",
     # subdomain="auth",
 )
-
-
-# Creating the main page
-@auth_bp.route("/user/")
-def index() -> None:
-    # Get information about if the user is logged in
-    c_user, auth_status = getUserAuthCookiesStatus(request, app_config)
-    # Returning the welcome page
-    return render_template("home.j2", logged_in=auth_status, user=c_user)
-
 
 ###
 # Note: huge problem is that right now seemingly if you authenticate a session for any user it'll let you go to any users page!
@@ -90,7 +80,7 @@ def index() -> None:
 
 
 # Creating the user page
-@auth_bp.get("/user/<string:username>")
+@auth_bp.get("/<string:username>")
 def showUser(username):
     # Get information about if the user is logged in
     c_user, auth_status = getUserAuthCookiesStatus(request, app_config)
@@ -118,7 +108,7 @@ def showUser(username):
 
 
 # Creating an interactive login page
-@auth_bp.route("/user/login")
+@auth_bp.route("/login")
 def showLogin():
     # Get information about if the user is logged in
     auth_status = getUserAuthStatus(request, app_config)
@@ -136,7 +126,7 @@ def showLogin():
 
 
 # Handling login attempts very crudely
-@auth_bp.post("/user/loginAttempt")
+@auth_bp.post("/loginAttempt")
 def loginAttempt():
     n_user = request.form["user_box"]
     n_passw = request.form["pass_box"]
@@ -163,7 +153,7 @@ def loginAttempt():
 
 
 # Creating an interactive log out page
-@auth_bp.route("/user/logout", methods=["GET", "POST"])
+@auth_bp.route("/logout", methods=["GET", "POST"])
 def showLogout():
     # Get cookie information
     c_user, c_auth, auth_status = getUserAuthCookiesStatusFull(request, app_config)
@@ -197,7 +187,7 @@ def showLogout():
 
 
 # Creating an interactive account creations page
-@auth_bp.route("/user/new_user")
+@auth_bp.route("/new_user")
 def newUser():
     # Get information about if the user is logged in
     auth_status = getUserAuthStatus(request, app_config)
@@ -215,7 +205,7 @@ def newUser():
 
 
 # Handling attempts to create users very crudely
-@auth_bp.post("/user/createAttempt")
+@auth_bp.post("/createAttempt")
 def createAttempt():
     user = request.form["user_box"]
     passw = request.form["pass_box"]

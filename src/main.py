@@ -17,9 +17,12 @@ from stored_credentials import app_config
 
 # My blueprints
 from auth.auth import auth_bp
+from auth.functions.auth_functions import getUserAuthCookiesStatus
 
 # Package Imports
 from flask import Flask
+from flask import request
+from flask import render_template
 from celery import Celery
 from celery import Task
 
@@ -72,6 +75,16 @@ removeExpiredSessions()
 
 # Add the blueprints
 flask_app_blue = addBlueprints(flask_app)
+
+
+# Creating the main index route (Don't know if I want to put this into a blueprint or just leave it here)
+@flask_app_blue.route("/")
+def index() -> None:
+    # Get information about if the user is logged in
+    c_user, auth_status = getUserAuthCookiesStatus(request, app_config)
+    # Returning the welcome page
+    return render_template("home.j2", logged_in=auth_status, user=c_user)
+
 
 # Show the blueprint map
 # print(flask_app_blue.url_map)

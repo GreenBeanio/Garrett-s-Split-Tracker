@@ -17,7 +17,7 @@ File Description: [Generates the logout page]
     {{ super() }}
 {% endblock %}
 {%block js %}
-    <script src="{{ url_for('static', filename='js/cookies.js') }}"></script>
+    {{ super() }}
 {% endblock %}
 
 {% block title %}
