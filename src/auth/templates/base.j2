@@ -24,16 +24,49 @@ File Description: [Generates the login page]
 
 <body>
     {% block navigation_bar %}
-    <div id="navigation_bar">
+    <div id="navigation-bar">
         {# Always show the "Welcome" tab #}
         <a href="{{url_for('auth.index')}}">Welcome</a>
-        {# Show either the "Log In" or "User" tab #}
+        {# Show either the "Log In" or "User" options #}
         {% if not logged_in %}
-        <a href="{{url_for('auth.showLogin')}}">Login</a>
+            <a href="{{url_for('auth.showLogin')}}">Login</a>
         {% else %}
-        <a href="{{url_for('auth.showUser', username=user)}}">User</a>
+            {# Create a dropdown list #}
+            <div class="dropdown">
+                <a class="a-dropdown">User</a>
+                <div class="dropdown-items">
+                    <a href="{{url_for('auth.showUser', username=user)}}">1</a>
+                    <a href="{{url_for('auth.showUser', username=user)}}">2</a>
+                    <a href="{{url_for('auth.showUser', username=user)}}">3</a>
+                    <a href="{{url_for('auth.showUser', username=user)}}">4</a>
+                </div>
+            </div>
         {% endif %}
-        {# Show the xxx tab #}
+        {# Show either the tracking information #}
+        {% if logged_in %}
+            <div class="dropdown">
+                <a class="a-dropdown">Tracker</a>
+                <div class="dropdown-items">
+                    <a href="{{url_for('auth.showUser', username=user)}}">1</a>
+                    <a href="{{url_for('auth.showUser', username=user)}}">2</a>
+                    <a href="{{url_for('auth.showUser', username=user)}}">3</a>
+                    <a href="{{url_for('auth.showUser', username=user)}}">4</a>
+                </div>
+            </div>
+        {% endif %}
+        {# Show either the tracking information #}
+        {% if logged_in %}
+            <div class="dropdown">
+                <a class="a-dropdown">Display</a>
+                <div class="dropdown-items">
+                    <a href="{{url_for('auth.showUser', username=user)}}">1</a>
+                    <a href="{{url_for('auth.showUser', username=user)}}">2</a>
+                    <a href="{{url_for('auth.showUser', username=user)}}">3</a>
+                    <a href="{{url_for('auth.showUser', username=user)}}">4</a>
+                </div>
+            </div>
+        {% endif %}
+        {# Show the xxx tabs #}
     </div>
     {% endblock %}
     {% block content%}

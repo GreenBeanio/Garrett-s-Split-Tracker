@@ -26,7 +26,7 @@ from celery import shared_task
 
 
 # Test to generate auth
-def generateAuth(username: str, age_s: int, config: Config) -> str:
+def generateAuth(username: str, age_s: int, ip: str, config: Config) -> str:
     # Get the user information
     user_info = getUser(username, config)
     # Creating the expiration date
@@ -39,13 +39,13 @@ def generateAuth(username: str, age_s: int, config: Config) -> str:
     ).hexdigest()
     # NEW_HERE: Saving the auth!!!
     mongo_db = config.mongo_con.get_database("split_tracker").get_collection("sessions")
-    mongo_db.insert_one({"username": username, "auth": auth, "exp": exp})
+    mongo_db.insert_one({"username": username, "auth": auth, "ip": ip, "exp": exp})
     # Returning the auth for a cookie
     return auth
 
 
 # Test to check authentication
-def checkAuth(user: str, auth: str, config: Config) -> bool:
+def checkAuth(user: str, auth: str, ip: str, config: Config) -> bool:
     # NEW_HERE: Getting the sessions from mongo!!!
     mongo_db = config.mongo_con.get_database("split_tracker").get_collection("sessions")
     # Check if there is a session
@@ -56,14 +56,21 @@ def checkAuth(user: str, auth: str, config: Config) -> bool:
     else:
         # Make the datetime timezone aware
         user_dt = user_session["exp"].replace(tzinfo=datetime.timezone.utc)
-        # Turn it into a class (I want to)
-        user_s = UserAuth(user=user, auth=auth, exp=user_dt)
+        # Turn it into a class (I want to no real reason to but I already made the class)
+        user_s = UserAuth(user=user, auth=auth, ip=ip, exp=user_dt)
         # Check if the session hasn't expired
         if user_s.exp >= datetime.datetime.now(
             datetime.datetime.now().astimezone().tzinfo
         ):
-            return True
-        # If it has expired then delete the session
+            # Return true regardless of ip if the user chose to ignore it when logging in
+            if user_session["ip"] == "ignore":
+                return True
+            # Check if the user is logging in with the same ip
+            elif user_s.ip == user_session["ip"]:
+                return True
+            else:
+                return False
+        # If it has expired then delete the session (regardless of if the correct user is trying to log in)
         else:
             removeSession(user, auth, config)
         return False
@@ -98,6 +105,13 @@ def removeSession(username: str, auth: str, config: Config):
     # Query Mongo
     mongo_db = config.mongo_con.get_database("split_tracker").get_collection("sessions")
     mongo_db.delete_one({"username": username, "auth": auth})
+
+
+# Removes a sessions (really probably only need the auth, but just to be sure I'll pass the username as well)
+def removeAllUserSessions(username: str, config: Config):
+    # Query Mongo
+    mongo_db = config.mongo_con.get_database("split_tracker").get_collection("sessions")
+    mongo_db.delete_many({"username": username})
 
 
 # Test to check if a provided password matches that users HashPass
@@ -161,7 +175,7 @@ def getUserAuthCookies(request: Request) -> Tuple[str, str]:
 def getUserAuthCookiesStatus(request: Request, config: Config) -> Tuple[str, bool]:
     c_user = request.cookies.get("user")
     c_auth = request.cookies.get("auth")
-    auth_status = checkAuth(c_user, c_auth, config)
+    auth_status = checkAuth(c_user, c_auth, request.remote_addr, config)
     return (c_user, auth_status)
 
 
@@ -169,7 +183,7 @@ def getUserAuthCookiesStatus(request: Request, config: Config) -> Tuple[str, boo
 def getUserAuthStatus(request: Request, config: Config) -> bool:
     c_user = request.cookies.get("user")
     c_auth = request.cookies.get("auth")
-    auth_status = checkAuth(c_user, c_auth, config)
+    auth_status = checkAuth(c_user, c_auth, request.remote_addr, config)
     return auth_status
 
 
@@ -179,7 +193,7 @@ def getUserAuthCookiesStatusFull(
 ) -> Tuple[str, str, bool]:
     c_user = request.cookies.get("user")
     c_auth = request.cookies.get("auth")
-    auth_status = checkAuth(c_user, c_auth, config)
+    auth_status = checkAuth(c_user, c_auth, request.remote_addr, config)
     return (c_user, c_auth, auth_status)
 
 

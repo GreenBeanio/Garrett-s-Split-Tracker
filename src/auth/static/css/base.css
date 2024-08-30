@@ -12,14 +12,20 @@ File Description: [The main CSS]
 */
 
 /* For the navigation bar object */
-#navigation_bar {
+#navigation-bar {
     background-color: royalblue;
-    overflow: hidden;
+    position: relative;
+    display: flex;
+    width: 100%;
+    height: fit-content;
+    /* Might change this doesn't seem to do anything */
+    justify-content: left;
+    align-items: center;
 }
 
 /* For the navigation bar object hyperlink*/
-#navigation_bar a {
-    float: left;
+#navigation-bar a {
+    float: inline-start;
     color: lightblue;
     text-align: center;
     padding: 10px 10px;
@@ -27,14 +33,9 @@ File Description: [The main CSS]
     font-size: 17px;
 }
 
-#navigation_bar a:hover {
+#navigation-bar a:hover {
     background-color: red;
     color: black;
-}
-
-#navigation_bar a:active {
-    background-color: purple;
-    color: white;
 }
 
 /* For the id footer object */
@@ -63,14 +64,68 @@ File Description: [The main CSS]
     color: blue;
 }
 
-#footer a:active {
-    color: purple;
-}
-
 /* A class to center text */
-.centered_text {
+.centered-text {
     text-align: center;
 }
+
+/* For creating a dropdown list */
+.dropdown {
+    position: relative;
+    display: flex;
+    float: left;
+    overflow-y: visible;
+    justify-content: center;
+    align-items: baseline;
+    width: fit-content;
+    height: fit-content;
+    padding: 2px 0px;
+    margin: 0%;
+    padding: 0%;
+}
+
+.a-dropdown {
+    background-color: royalblue;
+    color: lightblue;
+    text-align: center;
+    text-decoration: none;
+    font-size: 17px;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.dropdown:hover .a-dropdown {
+    background-color: red;
+    color: black;
+}
+
+.dropdown:hover .dropdown-items {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    margin-top: 75%;
+}
+
+.dropdown-items {
+    display: none;
+    position: absolute;
+    background-color: maroon;
+    z-index: 1;
+}
+
+.dropdown-items a {
+    color: black;
+    padding: 12px 12px;
+    text-decoration: none;
+    display: block;
+}
+
+.dropdown-items a:hover {
+    background-color: red;
+    color: black;
+}
+
 
 /*
 Footer Comment

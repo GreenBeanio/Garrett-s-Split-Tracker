@@ -23,9 +23,10 @@ class UserObj:
 
 # Test class to store sessions for authentication
 class UserAuth:
-    def __init__(self, user: str, auth: str, exp: datetime):
+    def __init__(self, user: str, auth: str, ip: str, exp: datetime):
         self.user = user
         self.auth = auth
+        self.ip = ip
         self.exp = exp
 
 

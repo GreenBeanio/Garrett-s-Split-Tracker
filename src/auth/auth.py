@@ -17,6 +17,7 @@ from auth.functions.auth_functions import checkAuth
 from auth.functions.auth_functions import checkLogin
 from auth.functions.auth_functions import generateAuth
 from auth.functions.auth_functions import removeSession
+from auth.functions.auth_functions import removeAllUserSessions
 from auth.functions.auth_functions import createSalt
 from auth.functions.auth_functions import createUser
 from auth.functions.auth_functions import checkUser
@@ -80,20 +81,6 @@ def index() -> None:
     c_user, auth_status = getUserAuthCookiesStatus(request, app_config)
     # Returning the welcome page
     return render_template("home.j2", logged_in=auth_status, user=c_user)
-    # # Checking if you're already logged in
-    # u_user = request.cookies.get("user")
-    # u_auth = request.cookies.get("auth")
-    # status = checkAuth(u_user, u_auth, app_config)
-    # if status:
-    #     return render_template("home.j2", t_user=u_user)
-    # # If you're not logged in go to the log in menu
-    # else:
-    #     flash("Please log in")
-    #     # Remove any existing cookies
-    #     user_redirect = redirect(url_for("auth.showLogin"))
-    #     user_redirect.delete_cookie("user")
-    #     user_redirect.delete_cookie("auth")
-    #     return user_redirect
 
 
 ###
@@ -165,10 +152,17 @@ def showLogin():
 def loginAttempt():
     n_user = request.form["user_box"]
     n_passw = request.form["pass_box"]
+    ip_status = request.form.get("ip_check")
+    print(ip_status)
+    ip_addr = request.remote_addr
     if checkLogin(n_user, n_passw, app_config):
         # Generate auth
         age_s = 60 * 60  # 1 hour
-        auth = generateAuth(n_user, age_s, app_config)
+        # Different auth depending on if we're using the IP or not
+        if ip_status == "use_ip":
+            auth = generateAuth(n_user, age_s, ip_addr, app_config)
+        else:
+            auth = generateAuth(n_user, age_s, "ignore", app_config)
         # Generate cookie
         user_redirect = redirect(url_for("auth.showUser", username=n_user))
         user_redirect.set_cookie("user", n_user, max_age=age_s)
@@ -183,9 +177,10 @@ def loginAttempt():
 # Creating an interactive log out page
 @auth_bp.route("/logout", methods=["GET", "POST"])
 def showLogout():
+    # Get cookie information
+    c_user, c_auth, auth_status = getUserAuthCookiesStatusFull(request, app_config)
     if request.method == "GET":
         # Checking if you're already logged in
-        c_user, c_auth, auth_status = getUserAuthCookiesStatusFull(request, app_config)
         if auth_status:
             return render_template(
                 "logout.j2", logged_in=auth_status, user=c_user, session=c_auth
@@ -197,13 +192,16 @@ def showLogout():
         # I wasn't checking for auth before on this because this shouldn't get called without auth, but just in case someone
         # does some shenanigans and tries to call it directly. Even so if they were able to do it somehow it still wouldn't do anything
         # besides try and remove a session.
-        c_user, c_auth, auth_status = getUserAuthCookiesStatusFull(request, app_config)
-        # Get the items we basically just sent. This is stupid, but it's the best I can think of with my JavaScript inexperience and tiredness.
-        # Wait do I even need to do this? Shouldn't the cookies still be on this page?
-        user = request.form["user_box"]
-        user = request.form["session_box"]
-        # Delete the session
-        removeSession(user, c_auth, app_config)
+        if auth_status:
+            # Check if the user wants to log out of all sessions (Getting the checkbox result) [Doing it with the get method instead of the index-like method
+            # because if it's not checked it will be None. If you have multiple items with the same name use getlist]
+            user = request.form.get("log_all_check")
+            if user == "log_out_all":
+                # Delete all the user sessions
+                removeAllUserSessions(c_user, app_config)
+            else:
+                # Delete only the current session
+                removeSession(c_user, c_auth, app_config)
         # I think I'd want this to actually log out of the current session so not like this. I'd also probably need to pass the session in.
         # Go to the log in
         flash("You've been logged out")
@@ -239,7 +237,7 @@ def createAttempt():
         createUser(user, passw, createSalt(), app_config)
         # Generate auth for the new user
         age_s = 60 * 60  # 1 hour
-        auth = generateAuth(user, age_s, app_config)
+        auth = generateAuth(user, age_s, request.remote_addr, app_config)
         # Generate cookie
         user_redirect = redirect(url_for("auth.showUser", username=user))
         user_redirect.set_cookie("user", user, max_age=age_s)
