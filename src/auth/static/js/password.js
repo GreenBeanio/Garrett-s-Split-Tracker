@@ -8,27 +8,28 @@ License: [MIT]
 Author(s): [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 Maintainer: [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
-File Description: [JavaScript to get the cookies from a webpage]
+File Description: [JavaScript to validate the password]
 */
 
 
-// My JavaScript skills aren't great. I've been trying to figure out how I can
-// log out using just the cookies.
-// For now I've just gone and not used this and instead put it into readonly boxes.
-// It's really stupid, but I'm tired and it works for now.
-function getCookies() {
-    // Get cookies from the webpage
-    cookies = document.cookie;
-    split_cookies = cookies.split('; ');
-    // Create a map
-    cookieMap = new Map();
-    // Add the cookies to the map
-    for (i in split_cookies) {
-        cookie = split_cookies[i].split('=');
-        cookieMap.set(cookie[0], cookie[1]);
+// Function to validate the password
+function validatePassword() {
+    // Get the passwords
+    var password = document.getElementById("pass_text").value
+    var password_conf = document.getElementById("confirm_pass_text").value
+    // Check that they are the same (this is all I should need to do because regex should do the rest)
+    if (password === password_conf) {
+        return true
+    } else {
+        return false
     }
-    return cookieMap;
 }
+
+/* Was testing RegEx
+x = "^(?=.*[0-9].*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_\\-+=<,>{};:'\"|\\\\/.?]).{16,32}$"
+y = RegExp(x)
+console.log(y)
+*/
 
 /*
 Footer Comment

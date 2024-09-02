@@ -30,7 +30,7 @@ File Description: [Generates the page for creating a new user]
     {{ super() }}
 {% endblock %}
 {%block js %}
-    {{ super() }}
+    <script src="{{url_for('auth.static', filename='js/password.js') }}"></script>
 {% endblock %}
 
 {% block title %}
@@ -45,15 +45,45 @@ File Description: [Generates the page for creating a new user]
     <h1> Welcome to Garrett's Split Tracker </h1>
     <h2> Create An Account </h2>
     <div>
-        <form method="POST" action="{{ url_for('auth.createAttempt')}}">
+        <form method="POST" onsubmit="return validatePassword()" action="{{ url_for('auth.createAttempt')}}">
             <label for="user_text">Username:</label><br>
-            <input type="text" id="user_text" name="user_box"><br><br>
+            <input type="text" id="user_text" name="user_box" pattern="^[a-zA-Z0-9]*.{6,32}$"><br><br>
             <label for="pass_text">Password:</label><br>
-            <input type="password" id="pass_text" name="pass_box"><br><br>
+            {# Regex is confusing, but this should be 16-32 length, 2+ numbers, 1+ lowercase, 1+ uppercase, and 1+ special character #}
+            <input type="password" id="pass_text" name="pass_box" pattern="^(?=.*[0-9].*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*_\-+.?]).{16,32}$"><br><br>
+            <label for="confirm_pass_text">Confirm Password:</label><br>
+            <input type="password" id="confirm_pass_text" name="confirm_pass_box" pattern="^(?=.*[0-9].*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*_\-+.?]).{16,32}$"><br><br>
             <input type="submit" id="submit_but" value="Login">
             <input type="reset" id="reset_but" value="Reset">
         </form>
     </div>
+    <div>
+        <ul>
+        <li> Username must be 8-32 characters long: </li>
+            <ul>
+                <li> Can only consist of lowercase letters, uppercase letters, and numbers. </li>
+            </ul>
+        <li> Password must be 16-32 characters long. </li>
+        <li> Password must have 1+ lowercase letters. </li>
+        <li> Password must have 1+ uppercase letters. </li>
+        <li> Password must have 2+ numbers. </li>
+        <li> Password must have 1+ special character: </li>
+        <ul>
+            <li>!</li>
+            <li>@</li>
+            <li>#</li>
+            <li>$</li>
+            <li>%</li>
+            <li>^</li>
+            <li>&</li>
+            <li>*</li>
+            <li>_</li>
+            <li>-</li>
+            <li>+</li>
+            <li>.</li>
+            <li>?</li>
+        </ul>
+        
 {% endblock %}
 
 {% block footer %}

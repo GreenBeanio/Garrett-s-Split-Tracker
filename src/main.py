@@ -76,7 +76,7 @@ flask_app_blue = addBlueprints(flask_app)
 
 
 # Creating the main index route (Don't know if I want to put this into a blueprint or just leave it here)
-@flask_app_blue.route("/")
+@flask_app_blue.get("/")
 def index() -> None:
     # Get information about if the user is logged in
     c_user, auth_status = getUserAuthCookiesStatus(request, app_config)

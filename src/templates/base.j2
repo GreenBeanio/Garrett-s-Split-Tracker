@@ -47,7 +47,7 @@ File Description: [Generates the login page]
                 <a class="a-dropdown">Tracker</a>
                 <div class="dropdown-items">
                     <a href="{{url_for('tracker.showTracker', username=user)}}">Tracking</a>
-                    <a href="">Categories</a>
+                    <a href="{{url_for('tracker.showTrackedActivities', username=user)}}">Activities</a>
                 </div>
             </div>
         {% endif %}

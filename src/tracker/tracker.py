@@ -25,6 +25,9 @@ from auth.functions.auth_functions import getUserAuthCookies
 from auth.functions.auth_functions import getUserAuthCookiesStatus
 from auth.functions.auth_functions import getUserAuthStatus
 from auth.functions.auth_functions import getUserAuthCookiesStatusFull
+from auth.functions.auth_functions import getUserAuthProper
+from auth.functions.auth_functions import getUserAuthProperBoth
+from auth.functions.auth_functions import getUserAuthProperBothName
 
 # New Imports
 from flask import Blueprint
@@ -48,22 +51,75 @@ tracker_bp = Blueprint(
 
 
 # Creating the tracker page
-@tracker_bp.route("/<string:username>")
+@tracker_bp.get("/user/<string:username>")
 def showTracker(username):
-    # Get information about if the user is logged in
-    auth_status = getUserAuthStatus(request, app_config)
-    # If the user isn't already logged in
-    if auth_status:
+    # Get information about if the user is logged in and is querying the right user
+    auth_status, proper_status, c_user = getUserAuthProperBothName(
+        request, app_config, username
+    )
+    # If the user is logged in and is checking themselves
+    if proper_status:
         return render_template("tracker.j2", logged_in=auth_status, user=username)
+    # If they are a logged in and searching the wrong account reroute them to their account (Naughty! Naughty!)
+    elif auth_status:
+        return render_template("tracker.j2", logged_in=auth_status, user=c_user)
+    # If neither reroute them to the login page
     else:
-        return "Naughty Naughty"
-    # return f"User is {escape(username)}"
+        # Remove any existing cookies
+        user_redirect = redirect(url_for("auth.showLogin"))
+        user_redirect.delete_cookie("user")
+        user_redirect.delete_cookie("auth")
+        return user_redirect
 
 
 # Creating the specific tracked activity page
-@tracker_bp.route("/<string:username>/<string:activity>")
-def showTrackedActivity(username, activity):
-    return f"User is {escape(username)} for the activity {escape(activity)}"
+@tracker_bp.route("/user/<string:username>/activities")
+def showTrackedActivities(username):
+    # Get information about if the user is logged in and is querying the right user
+    auth_status, proper_status, c_user = getUserAuthProperBothName(
+        request, app_config, username
+    )
+    # If the user is logged in and is checking themselves
+    if proper_status:
+        return render_template("tracked.j2", logged_in=auth_status, user=username)
+    # If they are a logged in and searching the wrong account reroute them to their main account page (can't trust that the user has the same activities)
+    elif auth_status:
+        return render_template("tracker.j2", logged_in=auth_status, user=c_user)
+    # If neither reroute them to the login page
+    else:
+        # Remove any existing cookies
+        user_redirect = redirect(url_for("auth.showLogin"))
+        user_redirect.delete_cookie("user")
+        user_redirect.delete_cookie("auth")
+        return user_redirect
+
+
+# # This one isn't operating yet ... this one will probably be json for fetch
+# # Creating the specific tracked activity page
+# @tracker_bp.route("/<string:username>/<string:activity>")
+# def showTrackedActivity(username, activity):
+#     # Get information about if the user is logged in and is querying the right user
+#     auth_status, proper_status, c_user = getUserAuthProperBothName(
+#         request, app_config, username
+#     )
+#     # If the user is logged in and is checking themselves
+#     if proper_status:
+#         return render_template(
+#             "tracked_activity.j2",
+#             logged_in=auth_status,
+#             user=username,
+#             activity=activity,
+#         )
+#     # If they are a logged in and searching the wrong account reroute them to their main account page (can't trust that the user has the same activities)
+#     elif auth_status:
+#         return render_template("tracker.j2", logged_in=auth_status, user=c_user)
+#     # If neither reroute them to the login page
+#     else:
+#         # Remove any existing cookies
+#         user_redirect = redirect(url_for("auth.showLogin"))
+#         user_redirect.delete_cookie("user")
+#         user_redirect.delete_cookie("auth")
+#         return user_redirect
 
 
 # Footer Comment

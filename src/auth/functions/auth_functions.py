@@ -197,7 +197,7 @@ def getUserAuthCookiesStatusFull(
     return (c_user, c_auth, auth_status)
 
 
-# Function to check if the have auth status AND it's the same user! (No shenanigans allowed!)
+# Function to check if the have auth status AND it's the same user! (No shenanigans allowed!) (Returns only if both conditions are fulfilled)
 def getUserAuthProper(request: Request, config: Config, search_user: str) -> bool:
     c_user = request.cookies.get("user")
     c_auth = request.cookies.get("auth")
@@ -206,6 +206,33 @@ def getUserAuthProper(request: Request, config: Config, search_user: str) -> boo
         return True
     else:
         return False
+
+
+# Function to check if the have auth status AND it's the same user! (No shenanigans allowed!) (Returns both the proper and auth status)
+def getUserAuthProperBoth(
+    request: Request, config: Config, search_user: str
+) -> Tuple[bool, bool]:
+    c_user = request.cookies.get("user")
+    c_auth = request.cookies.get("auth")
+    auth_status = checkAuth(c_user, c_auth, request.remote_addr, config)
+    if auth_status and c_user == search_user:
+        return auth_status, True
+    else:
+        return auth_status, False
+
+
+# Function to check if the have auth status AND it's the same user! (No shenanigans allowed!)
+# (Returns the proper status, auth status, and the user making the request)
+def getUserAuthProperBothName(
+    request: Request, config: Config, search_user: str
+) -> Tuple[bool, bool, str]:
+    c_user = request.cookies.get("user")
+    c_auth = request.cookies.get("auth")
+    auth_status = checkAuth(c_user, c_auth, request.remote_addr, config)
+    if auth_status and c_user == search_user:
+        return auth_status, True, c_user
+    else:
+        return auth_status, False, c_user
 
 
 # Repeated task to remove expired sessions (currently running once an hour, if they try to connect with an expired session before that it'll be removed anyway)

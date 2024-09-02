@@ -60,7 +60,10 @@
       - /static: Directory for flask static files
         - /css: Directory for css
         - /js: Directory for javascript
+          - @password.js: A javascript script for validating the confirmed password.
       - /templates: Directory for jinja templates
+        - @tracker.j2: The main interface when actually tracking activities.
+        - @tracked.j2: The main interface for looking at previously tracked activity components (such as the activity and its categories)
 - !/docker: Stuff for docker in the future
   - @docker-compose.yaml: Will be used for docker compose in the future
   - /dockerfiles: Will be used to store dockerfiles for the various components in the future

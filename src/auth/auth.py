@@ -25,6 +25,7 @@ from auth.functions.auth_functions import getUserAuthCookies
 from auth.functions.auth_functions import getUserAuthCookiesStatus
 from auth.functions.auth_functions import getUserAuthStatus
 from auth.functions.auth_functions import getUserAuthCookiesStatusFull
+from auth.functions.auth_functions import getUserAuthProperBothName
 
 # New Imports
 from flask import Blueprint
@@ -80,26 +81,20 @@ auth_bp = Blueprint(
 
 
 # Creating the user page
-@auth_bp.get("/<string:username>")
+@auth_bp.get("/user/<string:username>")
 def showUser(username):
-    # Get information about if the user is logged in
-    c_user, auth_status = getUserAuthCookiesStatus(request, app_config)
-    if auth_status:
-        # Check to make sure you're going to your own account and not someone else's like a bad boy.
-        if username == c_user:
-            return render_template("user.j2", logged_in=auth_status, user=username)
-        else:
-            # Temporary solution... this won't work because they could just edit the username in their cookies... I need to
-            # have it check the session auth for the username in question. I'm tired now though and it's time for bed. That's
-            # a problem for me to fix tomorrow.
-            # You know storing this as a cookie is probably a bad security idea, but I'm just trying to learn flask right now.
-            # Security for my personal project can come after I figure it out. I suppose I could store this data in the session
-            # object from flask, but I want it to be saved so they don't have to login again. You can set the session to not
-            # disappear though. Cookies may be foolish, but oh well. Pretty sure roblox uses one for session security and
-            # they surely know more than me.
-            return "Naughty Boy"
+    # Get information about if the user is logged in and is querying the right user
+    auth_status, proper_status, c_user = getUserAuthProperBothName(
+        request, app_config, username
+    )
+    # If the user is logged in and is checking themselves
+    if proper_status:
+        return render_template("user.j2", logged_in=auth_status, user=username)
+    # If they are a logged in and searching the wrong account reroute them to their account (Naughty! Naughty!)
+    elif auth_status:
+        return render_template("user.j2", logged_in=auth_status, user=c_user)
+    # If neither reroute them to the login page
     else:
-        flash("Unknown User or Incorrect Credentials")
         # Remove any existing cookies
         user_redirect = redirect(url_for("auth.showLogin"))
         user_redirect.delete_cookie("user")
@@ -108,7 +103,7 @@ def showUser(username):
 
 
 # Creating an interactive login page
-@auth_bp.route("/login")
+@auth_bp.get("/login")
 def showLogin():
     # Get information about if the user is logged in
     auth_status = getUserAuthStatus(request, app_config)
@@ -126,10 +121,11 @@ def showLogin():
 
 
 # Handling login attempts very crudely
-@auth_bp.post("/loginAttempt")
+@auth_bp.post("/login-attempt")
 def loginAttempt():
     n_user = request.form["user_box"]
     n_passw = request.form["pass_box"]
+    c_passw = request.form["confirm_pass_box"]
     ip_status = request.form.get("ip_check")
     print(ip_status)
     ip_addr = request.remote_addr
@@ -187,7 +183,7 @@ def showLogout():
 
 
 # Creating an interactive account creations page
-@auth_bp.route("/new_user")
+@auth_bp.get("/new-user")
 def newUser():
     # Get information about if the user is logged in
     auth_status = getUserAuthStatus(request, app_config)
@@ -205,7 +201,7 @@ def newUser():
 
 
 # Handling attempts to create users very crudely
-@auth_bp.post("/createAttempt")
+@auth_bp.post("/create-attempt")
 def createAttempt():
     user = request.form["user_box"]
     passw = request.form["pass_box"]
