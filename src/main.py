@@ -91,7 +91,7 @@ def index() -> None:
 if __name__ == "__main__":
     flask_app_blue.run(host="0.0.0.0", port=5000, debug=True)
 
-# Then un these cli commands (running flask first seems to matter, but the order of these 2 doesn't really,
+# Then use these cli commands (running flask first seems to matter, but the order of these 2 doesn't really,
 # but I start the beat first because the worker needs it):
 # "celery -A make_celery beat --loglevel INFO"
 # "celery -A make_celery worker --loglevel INFO"

@@ -35,10 +35,13 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             # Load the json
             json_obj = json.load(file)
 
+        # print(f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource=split_tracker')
         # Create a mongoDB connection
         mongo_client = MongoClient(
             f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource=split_tracker'
         )  # add ", tls=true" when that is set up
+        # print(mongo_client)
+        # print(mongo_client.server_info())
 
         # Create the celery dict
         celery_dict = dict(

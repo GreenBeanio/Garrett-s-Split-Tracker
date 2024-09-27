@@ -63,3 +63,6 @@ Celery is a despicable module.
 - Then I need to make sure there is a firewall rule to allow inbound data from TCP port 27017 (Mongo port)
   - New-NetFirewallRule -DisplayName "MongoDB from WSL2" -InterfaceAlias "vEthernet (WSL)" -Direction Inbound -Protocol TCP -LocalPort 27017 -Action Allow
 - Then I need to set the ip to be used for mongo to the ip address found by running "ipconfig" in powershell and getting the ipv4 address for the WSL ethernet adapter.
+  - This ip can also be found in wsl using "cat /etc/resolv.conf"
+  - Also "ip route show | grep -i default | awk '{ print $3}'"
+- Well great now all of the sudden after coming back a couple weeks later it isn't connecting to Mongo again.

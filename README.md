@@ -19,5 +19,16 @@
 ### Flask
 
 - cd src
+- source env/bin/activate
+- python main.py
+<!--
 - flask --app main run
   - flask --app main run --debug
+-->
+
+### Celery
+
+- cd src
+- source env/bin/activate
+- celery -A make_celery beat --loglevel INFO
+- celery -A make_celery worker --loglevel INFO
