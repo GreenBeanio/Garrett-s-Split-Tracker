@@ -1,0 +1,363 @@
+# Notes on Setting up Linux
+
+Assuming using Ubuntu 22.04.1 LTS jammy
+
+## Setting up basics
+
+Maybe add notes on setting up the basic linux stuff like disabling passwords and enabling ssh keys and stuff later. Creating ssh key to connect to it from your client and stuff too.
+
+## Setting up group
+
+- Creating the group
+  - sudo groupadd databases
+
+## Creating a user to access this project (for backups and stuff)
+
+- Create the user
+  - sudo useradd -m -d /home/split_tracker -s /bin/bash split_tracker
+- Add a password to the user
+  - sudo passwd split_tracker
+- Create the ssh directory
+  - sudo mkdir /home/split_tracker/.ssh
+- Copy the ssh key in
+  - sudo touch /home/split_tracker/.ssh/authorized_keys
+    - Put the public keys into the file (however you want. Here are some options)
+      - curl file_somewhere >> /home/split_tracker/.ssh/authorized_keys
+      - Vim /home/split_tracker/.ssh/authorized_keys
+- Set the directory permissions
+  - sudo chown -R split_tracker:split_tracker /home/split_tracker/.ssh
+  - sudo chmod 700 /home/split_tracker/.ssh
+  - sudo chmod 600 /home/split_tracker/.ssh/authorized_keys
+- Add a group
+  - sudo usermod -a -G databases split_tracker
+
+## Creating a directory to store files for this project
+
+- Switch to the split_tracker user
+  - su split_tracker
+- Go to the home directory
+  - cd
+- Create the directory
+  - mkdir split_tracker
+  - cd split_tracker
+- Create the subdirectories for the databases
+  - mkdir mongodb
+  - mkdir postgres
+- Creating the directory for SSL
+  - mkdir ssl
+
+- Changing the ownership and permissions
+  - Go back to the regular user
+    - exit
+  - Change the ownership
+    - sudo chown split_tracker:databases /home/split_tracker/split_tracker
+    - sudo chown split_tracker:databases /home/split_tracker/split_tracker/mongodb
+    - sudo chown split_tracker:databases /home/split_tracker/split_tracker/postgres
+    - sudo chown split_tracker:databases /home/split_tracker/split_tracker/ssl
+      - You could also do "sudo chown -R split_tracker:databases /home/split_tracker/split_tracker/*" if you haven't put anything in the new directories yet
+  - Change the permissions
+    - sudo chmod u=rwx,g=rwx,o=r /home/split_tracker/split_tracker
+    - sudo chmod u=rwx,g=rwx,o=r /home/split_tracker/split_tracker/mongodb
+    - sudo chmod u=rwx,g=rwx,o=r /home/split_tracker/split_tracker/postgres
+    - sudo chmod u=rwx,g=rwx,o=r /home/split_tracker/split_tracker/ssl
+      - You could also do "sudo chmod -R u=rwx,g=rwx,o=r /home/split_tracker/split_tracker/" if you haven't put anything in the new directories yet
+
+- XXX I will need to add the actual contents of this repo in here too
+
+## DynamicDNS
+
+If you're hosting this from your home server (that probably has a dynamic IP) and not a VPS (which probably has a static IP) you will probably want to set up Dynamic DNS with your domain (assuming that you're using a domain and not an IP address).
+
+I currently use NameCheap for my domains and you can use dynamic DNS with them through ddclient.
+
+- Install ddclient
+  - sudo apt-get install ddclient
+- Go into the configuration file
+  - sudo vim /etc/ddclient.conf
+  - The information in the domain should look something like this
+    - <pre><code>
+        #NameCheap
+        daemon=300
+        ssl=yes
+        use=web
+        web=dynamicdns.park-your-domain.com/getip
+        protocol=namecheap
+        server=dynamicdns.park-your-domain.com
+        # Your Domain
+        login=your.domain
+        password='Your DNS Password From Namecheap'
+        host.your.domain</code></pre>
+    - You will most likely need a @.you.domain as one of the domains for the root domain dns record.
+  - Test the script
+    - sudo ddclient -daemon=0 -noquiet -debug
+  - Set up a daemon
+    - sudo vim /etc/default/ddclient
+    - Set or add the following
+      - <pre><code>
+        run_daemon="true"
+        daemon_interval="300"</code></pre>
+    - systemctl restart ddclient
+    - systemctl status ddclient
+- In the configuration file you will need to add all the subdomains you're using on different lines.
+- You will need to add the following A records in your domain registrar from that domain and subdomain to the ip.
+  - With NameCheap I believe the ip address you enter shouldn't matter because the dynamic DNS will update it automatically.
+
+## Creating the SSL (Using LetsEncrypt)
+
+- Install packages
+  - sudo apt update
+  - sudo apt install python3 python3-venv libaugeas0
+- Install Certbot to use LetsEncrypt
+  - If you have installed it through apt or somewhere else before remove it first
+    - sudo apt-get remove certbot
+    - sudo apt purge
+    - sudo apt autoremove
+  - Install Certbot
+    - sudo python3 -m venv /opt/certbot/
+    - sudo /opt/certbot/bin/pip install --upgrade pip
+    - sudo /opt/certbot/bin/pip install certbot
+    - sudo ln -s /opt/certbot/bin/certbot /usr/bin/certbot
+    - Depending on if your web server is currently running
+      - If it isn running
+        - sudo certbot certonly --standalone
+      - If it isn't running
+        - sudo certbot certonly --webroot
+      - Using certonly because I don't want to install it into a web server yet (nginx specifically)
+      - I would recommend turning off any web servers currently running on port 80 and running standalone mode for now.
+        - sudo systemctl stop nginx.service
+        - Then run the following when all of this step has been completed
+          - sudo systemctl start nginx.service
+      - Because I want to save the ssl files to a specific location I ran
+        - sudo certbot certonly --standalone --config-dir /home/split_tracker/split_tracker/ssl
+      - If you want to specify a domain without any prompts from certbot do (you can have multiple -d arguments for multiple domains)
+        - sudo certbot certonly --standalone -d subdomain.domain.topleveldomain
+        - or if using the custom directory
+          - sudo certbot certonly --standalone --config-dir /home/split_tracker/split_tracker/ssl -d subdomain.domain.topleveldomain
+      - Now if you want to use a wildcard subdomain instead of individual subdomains it's more complicated
+        - ```sudo certbot certonly --manual --server https://acme-v02.api.letsencrypt.org/directory --preferred-challenges dns -d *.domain.topleveldomain```
+        - or if using the custom directory
+          - ```sudo certbot certonly --manual --config-dir /home/split_tracker/split_tracker/ssl --server https://acme-v02.api.letsencrypt.org/directory --preferred-challenges dns -d *.domain.topleveldomain```
+        - Then go to your domain name provider and add a txt record using the host it gives you and the value it gives you.
+          - For Namecheap we make the host "_acme-challenge" or whatever it tells you without the rest of the domain.
+          - The value will be what it gives you.
+        - Before continuing check that the new record has been deployed. It should provide a link to google admin toolbox to check the records on your domain. If not you can go to <https://toolbox.googleapps.com/apps/dig> and put in the host.your.domain that you just put into your domain name registrar and selecting txt.
+        - When it is posted you can press enter to continue. However, it seems that this wildcard wont be renewed automatically like the specific subdomains will. You will have to do this command again when it expires (before it expires preferably). You can also remove the txt record from the DNS.
+          - I could be wrong about it not renewing automatically, but it says that. I will see when my test expires in the future.
+      - I don't want to use a wildcard for this project, because I only have static subdomains. The subdomains this project uses is:
+        - ```mongo.youredomain.xxx```
+        - ```postgre.youredomain.xxx```
+        - ```redis.youredomain.xxx```
+        - ```www.youredomain.xxx```
+        - ```youredomain.xxx```
+      - Realistically you don't actually even need to do the mongo, postgre, and redis subdomains if they're all running locally on one machine or on a local network, you also wouldn't even need to set up ssl for them. However, while developing this I am using a separate server for the databases and my local machine for running the program. It's still on a local network though which negates the need for all of this ssl and domain actions, but it's a good learning experience to experiment with it. If you're running everything locally you can feel free to ignore everything involving ssl on the databases and their subdomains. However, you should still set up www and the base domain with ssl because you're going to need HTTPS if you're not a goober.
+      - Also note that if using dynamic dns through ddclient you will need to add all the subdomains in there too.
+    - Set up automatic renewal
+      - <pre><code>echo "0 0,12 ** *root /opt/certbot/bin/python -c 'import random; import time; time.sleep(random.random()* 3600)' && sudo certbot renew -q" | sudo tee -a /etc/crontab > /dev/null</code></pre>
+      - Since I want to use a different directory than default I did
+        - <pre><code>echo "0 0,12 ** *root /opt/certbot/bin/python -c 'import random; import time; time.sleep(random.random()* 3600)' && sudo certbot renew --config-dir /home/split_tracker/split_tracker/ssl -q" | sudo tee -a /etc/crontab > /dev/null<code></pre>
+    - Manually renew certificates
+      - sudo certbot renew -q
+      - If using the custom location it's
+        - sudo certbot renew --config-dir /home/split_tracker/split_tracker/ssl -q
+    - If you ever need to update certbot run
+      - sudo /opt/certbot/bin/pip install --upgrade certbot
+    - You can view certificates with this command
+      - certbot certificates
+      - If using the custom location it's
+        - certbot certificates --config-dir /home/split_tracker/split_tracker/ssl
+    - Note that instead of using the config-dir for a custom location you could also use "sudo ln -s /etc/letsencrypt/live/ /home/split_tracker/split_tracker/ssl" to create a symbolic link to all the files, but I'm choosing to use the config-dir approach.
+
+## Installing PostgreSQL
+
+### Creating a new user
+
+- Create the user
+  - sudo useradd -m -d /home/u_postgres -s /bin/bash u_postgres
+- Add a password to the user
+  - sudo passwd u_postgres
+- Create the ssh directory
+  - sudo mkdir /home/u_postgres/.ssh
+- Copy the ssh key in
+  - sudo touch /home/u_postgres/.ssh/authorized_keys
+    - Put the public keys into the file (however you want. Here are some options)
+      - curl file_somewhere >> /home/u_postgres/.ssh/authorized_keys
+      - Vim /home/u_postgres/.ssh/authorized_keys
+- Set the directory permissions
+  - sudo chown -R u_postgres:u_postgres /home/u_postgres/.ssh
+  - sudo chmod 700 /home/u_postgres/.ssh
+  - sudo chmod 600 /home/u_postgres/.ssh/authorized_keys
+- Add a group
+  - sudo usermod -a -G databases u_postgres
+
+### Installing
+
+- Install
+  - sudo apt install postgresql
+
+### Setting up
+
+The configuration file can be found at "/etc/postgresql/*/main/postgresql.conf" if needed (the start is your version of postgreSQL)
+
+- Systemd Approach (what you'll likely use)
+  - File location is at one of these
+    - /lib/systemd/system/postgresql.service
+    - /etc/systemd/system/postgresql.service
+  - Start the service
+  - sudo systemctl start postgresql
+  - Check the status
+  - sudo systemctl status postgresql
+  - Enable it on boot
+  - sudo systemctl enable postgresql
+
+- Stuff from the documentation (other method)
+  - Starting the database with a data directory
+  - In the background
+    - postgres -D /usr/local/pgsql/data >logfile 2>&1 &
+  - Active
+    - postgres -D /usr/local/pgsql/data
+  - With wrapper
+    - pg_ctl start -l logfile
+  - With user
+    - su postgres -c 'pg_ctl start -D /usr/local/pgsql/data -l serverlog'
+
+- To use the shell
+  - sudo -u postgres psql
+
+## Installing MongoDB
+
+### Creating a new user
+
+- Create the user
+  - sudo useradd -m -d /home/u_mongo -s /bin/bash u_mongo
+- Add a password to the user
+  - sudo passwd u_mongo
+- Create the ssh directory
+  - sudo mkdir /home/u_mongo/.ssh
+- Copy the ssh key in
+  - sudo touch /home/u_mongo/.ssh/authorized_keys
+    - Put the public keys into the file (however you want. Here are some options)
+      - curl file_somewhere >> /home/u_mongo/.ssh/authorized_keys
+      - Vim /home/u_mongo/.ssh/authorized_keys
+- Set the directory permissions
+  - sudo chown -R u_mongo:u_mongo /home/u_mongo/.ssh
+  - sudo chmod 700 /home/u_mongo/.ssh
+  - sudo chmod 600 /home/u_mongo/.ssh/authorized_keys
+- Add a group
+  - sudo usermod -a -G databases u_mongo
+
+### Installing
+
+- sudo apt-get install gnupg curl
+- curl -fsSL <https://www.mongodb.org/static/pgp/server-7.0.asc> | sudo gpg -o usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+- echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] <https://repo.mongodb.org/apt/ubuntu> jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+- sudo apt-get update
+- sudo apt-get install -y mongodb-org
+
+### Setting up
+
+The configuration file can be found at "/etc/mongod.conf" if needed
+
+- Start the service
+  - sudo systemctl start mongod
+- Check the status
+  - sudo systemctl status mongod
+- Enable it on boot
+  - sudo systemctl enable mongod
+- To stop and restart it
+  - sudo systemctl stop mongod
+  - sudo systemctl restart mongod
+
+- To use the shell
+  - mongosh
+
+### Changing the dbPath (because I want to)
+
+- Go into the configuration file
+  - sudo vim /etc/mongod.conf
+- Edit the path in the storage section called dbPath
+  - dbPath: /home/split_tracker/split_tracker/mongodb
+
+### Adding SSL
+
+- Go into the configuration file
+  - sudo vim /etc/mongod.conf
+  - Add the following if using the ssl steps above. You will need to change the path to match the domain name you used. You can find it by running "sudo ls /home/split_tracker/split_tracker/ssl/live/"
+    - <pre><code>
+    net:
+       tls:
+          mode: requireTLS
+          certificateKeyFile: /home/split_tracker/split_tracker/ssl/live/youredomain.xxx/cert1.pem
+          CAFile: /home/split_tracker/split_tracker/ssl/live/youredomain.xxx/fullchain1.pem
+    </code></pre>
+    - If for some reason you still want to allow connections without ssl you can add the follow line to that section
+      - allowConnectionsWithoutCertificates: true
+
+## Installing Redis
+
+### Creating a new user
+
+- Create the user
+  - sudo useradd -m -d /home/u_redis -s /bin/bash u_redis
+- Add a password to the user
+  - sudo passwd u_redis
+- Create the ssh directory
+  - sudo mkdir /home/u_redis/.ssh
+- Copy the ssh key in
+  - sudo touch /home/u_redis/.ssh/authorized_keys
+    - Put the public keys into the file (however you want. Here are some options)
+      - curl file_somewhere >> /home/u_redis/.ssh/authorized_keys
+      - Vim /home/u_redis/.ssh/authorized_keyss
+- Set the directory permissions
+  - sudo chown -R u_redis:u_redis /home/u_redis/.ssh
+  - sudo chmod 700 /home/u_redis/.ssh
+  - sudo chmod 600 /home/u_redis/.ssh/authorized_keys
+- Add a group
+  - sudo usermod -a -G databases u_redis
+
+### Installing
+
+- sudo apt-get install lsb-release curl gpg
+- curl -fsSL <https://packages.redis.io/gpg> | sudo gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
+- sudo chmod 644 /usr/share/keyrings/redis-archive-keyring.gpg
+- echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] <https://packages.redis.io/deb> $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/redis.list
+- sudo apt-get update
+- sudo apt-get install redis
+
+### Setting up
+
+The configuration file can be found at "/etc/redis/redis.conf" if needed
+
+- Start the service
+  - sudo systemctl start redis-server
+- Check the status
+  - sudo systemctl status redis-server
+- Enable it on boot
+  - sudo systemctl enable redis-server
+
+## Need to port forward
+
+## Installing Python?
+
+## Installing the code from github
+
+## Setting up Backup with Rsync?
+
+## Setting up Backup of Databases?
+
+## Nginx set up? Reverse Proxies instead of ports?
+
+- nginx is at "/etc/nginx"
+- nginx available sites are at "/etc/nginx/sites-available"
+- nginx enabled sites are at "/etc/nginx/sites-enabled"
+
+## Setting up gunicorn for flask?
+
+## Ports (Just Notes)
+
+- SSH: 22
+- PostgreSQL: 5432
+- MongoDB: 27017
+- Redis: 6379
+- Flask:
+- HTTP: 80
+- HTTPS: 443

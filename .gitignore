@@ -1,8 +1,11 @@
+# My ignores
+config.json
+credentials.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-config.json
 
 # C extensions
 *.so
