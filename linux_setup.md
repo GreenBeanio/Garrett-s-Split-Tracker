@@ -34,21 +34,24 @@ Maybe add notes on setting up the basic linux stuff like disabling passwords and
 ## Creating a directory to store files for this project
 
 - Switch to the split_tracker user
+  - sudo -u split_tracker
 
 - Create the directory
   - sudo mkdir /projects
   - cd /projects
-- Create the subdirectories for the databases
-  - sudo mkdir mongodb
-  - sudo mkdir postgres
 - Creating the directory for SSL
   - sudo mkdir ssl
+- Creating a directory for storing links to config files
+  - sudo mkdir configs
 
 - Changing the ownership and permissions
   - Change the ownership
     - sudo chown -R split_tracker:databases /projects
   - Change the permissions
     - sudo chmod -R u=rwx,g=rwx,o=rx /projects
+
+- Exit the user
+  - exit
 
 - XXX I will need to add the actual contents of this repo in here too
 
@@ -157,6 +160,17 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
     - You can also add the argument flag "--register-unsafely-without-email" to any of the certbot commands to not use an email.
     - Run this to make it accessible. (Not sure if this will become a problem later, but we need to be able to access it)
       - sudo chmod -R u=rwx,g=rwx,o=rx /projects/ssl
+      - sudo chown split_tracker:databases /projects/ssl
+    - Notes:
+      - Certbot will return 4 files:
+        - cert.pem
+          - The public key. However, this one shouldn't be used with most software.
+        - chain.pem
+          - The certificate chain.
+        - fullchain.pem
+          - The certificate that you will use in most server software. It is a combination of the cert.pem and the chain.pem
+        - privkey.pem
+          - The private key
 
 ## Installing PostgreSQL
 
@@ -184,6 +198,69 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
 
 - Install
   - sudo apt install postgresql
+
+### Creating a link to the config file
+
+- Create the directory
+  - sudo mkdir /projects/configs/postgres
+- Edit the ownership and permission
+  - sudo chmod u=rwx,g=rwx,o=rx /projects/configs/postgres
+  - sudo chown split_tracker:databases /projects/configs/postgres
+- Create the soft link
+  - sudo ln -s /etc/postgresql/version#/main/postgresql.conf /projects/configs/postgres/postgresql.conf
+  - sudo ln -s /etc/postgresql/version#/main/pg_hba.conf /projects/configs/postgres/pg_hba.conf
+
+### Changing the data path
+
+- Start postgresql
+  - sudo systemctl start postgresql
+- Enter postgresql and get the current directory
+  - sudo -u postgres psql
+  - SHOW data_directory;
+    - Copy this path. It will most likely be like this "/var/lib/postgresql/version#/main".
+  - exit
+- Stop postgresql
+  - sudo systemctl stop postgresql
+- Copy the original data to your new location
+  - sudo rsync -a /var/lib/postgresql/version#/main /projects/
+  - sudo mv /projects/main /projects/postgres
+- Change the group owner and permissions of the files because we want to be able to access it
+  - sudo chown postgres:databases /projects/postgres
+  - sudo chmod u=rwx,g=rx,o= /projects/postgres
+- Change the default path
+  - sudo vim /etc/postgresql/version#/main/postgresql.conf
+  - Change the data_directory option to the path
+- Check that postgres launches
+  - sudo systemctl start postgresql
+  - sudo systemctl status postgresql
+    - If it's active then good. If not check the path you entered.
+  - sudo systemctl stop postgresql
+
+### Adding SSL
+
+- Go into the configuration file
+  - sudo vim /etc/postgresql/version#/main/postgresql.conf
+  - Find and modify, or add, the following. You will need to change the path to match the domain name you used. You can find it by running "sudo ls /projects/ssl/live/"
+    - <pre><code>
+    ssl = on
+    #ssl_ca_file = '/projects/ssl/live/youredomain.xxx/chain.pem'
+    #ssl_cert_file = '/projects/ssl/live/youredomain.xxx/cert.pem'
+    ssl_cert_file = '/projects/ssl/live/youredomain.xxx/fullchain.pem'
+    ssl_key_file = '/projects/ssl/live/youredomain.xxx/privkey.pem'
+    ssl_ciphers = 'HIGH:MEDIUM:+3DES:!aNULL'
+    ssl_prefer_server_ciphers = on
+    </code></pre>
+- Add rule to allow for ssl
+  - sudo vim /etc/postgresql/version#/main/pg_hba.conf
+  - Add the following to the end
+    - <pre><code>
+    hostssl  all         all          0.0.0.0/0      md5
+    </code></pre>
+- Test that it works
+  - sudo systemctl start postgresql
+  - sudo systemctl status postgresql
+    - If it's active then good. If not check the paths you entered.
+  - sudo systemctl stop postgresql
 
 ### Setting up
 
@@ -247,8 +324,22 @@ The configuration file can be found at "/etc/postgresql/\*/main/postgresql.conf"
 - sudo apt-get update
 - sudo apt-get install -y mongodb-org
 
+### Creating a link to the config file
+
+- Create the directory
+  - sudo mkdir /projects/configs/mongodb
+- Edit the ownership and permission
+  - sudo chmod u=rwx,g=rwx,o=rx /projects/configs/mongodb
+  - sudo chown split_tracker:databases /projects/configs/mongodb
+- Create the soft link
+  - sudo ln -s /etc/mongod.conf /projects/configs/mongodb/mongod.conf
+
 ### Changing the dbPath (because I want to)
 
+- Create the directory
+  - sudo mkdir /projects/mnongodb
+  - sudo chown mongodb:databases /projects/mongodb
+  - sudo chmod u=rwx,g=rx,o= /projects/mongodb
 - Go into the configuration file
   - sudo vim /etc/mongod.conf
 - Edit the path in the storage section called dbPath
@@ -325,6 +416,45 @@ The configuration file can be found at "/etc/mongod.conf" if needed
 - echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] <https://packages.redis.io/deb> $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/redis.list
 - sudo apt-get update
 - sudo apt-get install redis
+
+### Changing the data directory
+
+- Create the directory
+  - sudo mkdir /projects/redis
+  - sudo chown redis:databases /projects/redis
+  - sudo chmod u=rwx,g=rx,o= /projects/redis
+- Go into the configuration file
+  - sudo vim /etc/redis/redis.conf
+- Edit the path in the storage section called dbPath
+  - dbPath: /projects/redis
+
+### Adding SSL
+
+- Go into the configuration file
+  - sudo vim /etc/redis/redis.conf
+  - Find and modify, or add, the following. You will need to change the path to match the domain name you used. You can find it by running "sudo ls /projects/ssl/live/"
+    - <pre><code>
+    port 0
+    tls-port 6379
+    tls-cert-file /projects/ssl/live/youredomain.xxx/cert.pem
+    tls-key-file /projects/ssl/live/youredomain.xxx/privkey.pem
+    tls-ca-cert-file /projects/ssl/live/youredomain.xxx/chain.pem
+    </code></pre>
+- Test that it works
+  - sudo systemctl start redis-server
+  - sudo systemctl status redis-server
+    - If it's active then good. If not check the paths you entered.
+  - sudo systemctl stop redis-server
+
+### Creating a link to the config file
+
+- Create the directory
+  - sudo mkdir /projects/configs/redis
+- Edit the ownership and permission
+  - sudo chmod u=rwx,g=rwx,o=rx /projects/configs/redis
+  - sudo chown split_tracker:databases /projects/configs/redis
+- Create the soft link
+  - sudo ln -s /etc/redis/redis.conf /projects/configs/redis/redis.conf
 
 ### Setting up
 
