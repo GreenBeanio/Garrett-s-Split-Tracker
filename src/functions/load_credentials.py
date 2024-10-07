@@ -23,6 +23,7 @@ from pymongo import MongoClient
 import datetime
 import psycopg2
 import redis
+import ssl
 
 
 # Function to load our credentials
@@ -37,19 +38,47 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             # Load the json
             json_obj = json.load(file)
 
+        # Need to check these paths with pathlib first for the ssl
+
+        # Connect to MongoDB
         if json_obj["MONGO_SSL"]:
-            pass  # USE SSL
+            # print(f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource={json_obj["MONGO_DATABASE"]}&tls=true&tlsCAFILE={json_obj["MONGO_SSL_FILE"]}')
+            mongo_client = MongoClient(
+                authSource=json_obj["MONGO_DATABASE"],
+                username=json_obj["MONGO_USER"],
+                password=json_obj["MONGO_PASS"],
+                host=json_obj["MONGO_ADDRESS"],
+                port=json_obj["MONGO_PORT"],
+                # authMechanism="SCRAM-SHA-256",
+                tsl=True,
+                tlsCAFile=json_obj["MONGO_SSL_FILE"],
+                # tlsCertificateKeyFile=json_obj["MONGO_SSL_FILE"] # Might need to try this one instead if that one doesn't work
+            )
         else:
-            # print(f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource=split_tracker')
+            # print(f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource={json_obj["MONGO_DATABASE"]}')
             # Create a mongoDB connection
             mongo_client = MongoClient(
                 f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource={json_obj["MONGO_DATABASE"]}'
-            )  # add ", tls=true" when that is set up
+            )
             # print(mongo_client)
             # print(mongo_client.server_info())
 
+        # Connect to PostgreSQL
         if json_obj["POSTGRE_SSL"]:
-            pass  # USE SSL
+            ## Create the postgres client
+            postgre_client = psycopg2.connect(
+                database=json_obj["POSTGRE_DATABASE"],
+                user=json_obj["POSTGRE_USER"],
+                password=json_obj["POSTGRE_PASS"],
+                host=json_obj["POSTGRE_ADDRESS"],
+                port=json_obj["POSTGRE_PORT"],
+                sslmode="verify-full",  # "require" or "verify-ca"
+                # For verify-ca and verify-full
+                sslrootcert=json_obj["POSTGRE_CA_FILE"],
+                # For verify-full
+                sslcert=json_obj["POSTGRE_CERT_FILE"],
+                sslkey=json_obj["POSTGRE_KEY_FILE"],
+            )
         else:
             ## Create the postgres client
             postgre_client = psycopg2.connect(
@@ -60,20 +89,38 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                 port=json_obj["POSTGRE_PORT"],
             )
 
+        # Connect to Redis
         if json_obj["REDIS_SSL"]:
+            # Create the celery dict
+            celery_dict = dict(
+                broker_url=f'redis://ANY_USERNAME:{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
+                result_backend=f'redis://ANY_USERNAME:{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
+                task_ignore_result=True,
+                # Beat schedule for timing repetitive events (You can set up the schedules in here like this too instead of with the functions)
+                # "task-name" : {"task": "function", "schedule": time_in_seconds}
+                # beat_schedule={
+                #     "task-every-minute": {
+                #         "task": "auth.functions.auth_functions.removeExpiredSessions",
+                #         "schedule": datetime.timedelta(seconds=1),
+                #     }
+                # },
+                broker_use_ssl={
+                    "keyfile": json_obj["REDIS_KEY_FILE"],
+                    "certfile": json_obj["REDIS_CERT_FILE"],
+                    "ca_certs": json_obj["REDIS_CA_FILE"],
+                    "cert_reqs": ssl.CERT_REQUIRED,
+                },
+            )
             # Creating redis connection
             redis_client = redis.Redis(
                 host=json_obj["REDIS_ADDRESS"],
                 port=json_obj["REDIS_PORT"],
                 password=json_obj["REDIS_PASS"],
                 ssl=True,
-                ssl_certfile=json_obj[
-                    "REDIS_CERT_FILE"
-                ],  # Check these paths with pathlib first
+                ssl_certfile=json_obj["REDIS_CERT_FILE"],
                 ssl_keyfile=json_obj["REDIS_KEY_FILE"],
                 ssl_ca_certs=json_obj["REDIS_CA_FILE"],
             )
-            pass  # USE SSL
         else:
             # Create the celery dict
             celery_dict = dict(
@@ -109,7 +156,7 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             mongo_passwd=json_obj["MONGO_PASS"],
             mongo_database=json_obj["MONGO_DATABASE"],
             mongo_ssl=json_obj["MONGO_SSL"],
-            # mongo_key=json_obj["MONGO_SSL_FILE"],
+            mongo_key=json_obj["MONGO_SSL_FILE"],
             mongo_con=mongo_client,
             # Postgres config
             postgre_addr=json_obj["POSTGRE_ADDRESS"],
@@ -118,9 +165,9 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             postgre_passwd=json_obj["POSTGRE_PASS"],
             postgre_database=json_obj["POSTGRE_DATABASE"],
             postgre_ssl=json_obj["POSTGRE_SSL"],
-            # postgre_key=json_obj["POSTGRE_KEY_FILE"],
-            # postgre_cert=json_obj["POSTGRE_CERT_FILE"],
-            # postgre_ca=json_obj["POSTGRE_CA_FILE"],
+            postgre_key=json_obj["POSTGRE_KEY_FILE"],
+            postgre_cert=json_obj["POSTGRE_CERT_FILE"],
+            postgre_ca=json_obj["POSTGRE_CA_FILE"],
             postgre_con=postgre_client,
             # Celery/Redis config
             redis_addr=json_obj["REDIS_ADDRESS"],
@@ -130,8 +177,8 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             redis_key=json_obj["REDIS_KEY_FILE"],
             redis_cert=json_obj["REDIS_CERT_FILE"],
             redis_ca=json_obj["REDIS_CA_FILE"],
-            celery_dict=celery_dict,
             redis_con=redis_client,
+            celery_dict=celery_dict,
             # I don't even really need to store the password, address, and user name if I only make the connection here. We'll see if I change that later.
         )
         # print(auth.functions.auth_functions.removeExpiredSessions.name)  # TEMP: Checking celery
@@ -139,27 +186,28 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
     # Create a file if it doesn't exist
     else:
         default_json = {
+            # General
             "SECRET_KEY": "YOUR_SECRET_KEY",
             "TESTING": "TRUE_OR_FALSE",
-            ###
+            # Mongodb
             "MONGO_ADDRESS": "ADDRESS_TO_MONGO",
             "MONGO_PORT": "MONGO_PORT",
             "MONGO_USER": "YOUR_MONGO_USER",
             "MONGO_PASS": "YOUR_MONGO_PASSWORD",
             "MONGO_DATABASE": "MONGO_DATABASE_NAME",
             "MONGO_SSL": False,
-            # "MONGO_SSL_FILE" : "PATH_TO_SSL_FILE",
-            ###
+            "MONGO_SSL_FILE": "PATH_TO_SSL_FILE",
+            # PostgreSQL
             "POSTGRE_ADDRESS": "ADDRESS_TO_POSTGRE",
             "POSTGRE_PORT": "POSTGRE_PORT",
             "POSTGRE_USER": "YOUR_POSTGRE_USER",
             "POSTGRE_PASS": "YOUR_POSTGRE_PASSWORD",
             "POSTGRE_DATABASE": "POSTGRE_DATABASE_NAME",
             "POSTGRE_SSL": False,
-            # "POSTGRE_KEY_FILE" : "PATH_TO_SSL_KEY",
-            # "POSTGRE_CERT_FILE" : "PATH_TO_SSL_CERT",
-            # "POSTGRE_CA_FILE" : "PATH_TO_SSL_CA",
-            ###
+            "POSTGRE_KEY_FILE": "PATH_TO_SSL_KEY",
+            "POSTGRE_CERT_FILE": "PATH_TO_SSL_CERT",
+            "POSTGRE_CA_FILE": "PATH_TO_SSL_CA",
+            # Redis
             "REDIS_ADDRESS": "ADDRESS_TO_REDIS",
             "REDIS_PORT": "REDIS_PORT",
             "REDIS_PASS": "YOUR_REDIS_PASSWORD",
