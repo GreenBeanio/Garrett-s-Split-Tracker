@@ -200,8 +200,10 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
         - sudo openssl genrsa -aes256 -out /projects/ssl/ca.key 4096
   - Create the self-signed certificate authority certificate
     - Creating a simple certificate
-      - sudo openssl req -new -x509 -sha256 -nodes -days 365 -key /projects/ssl/ca.key -out /projects/ssl/ca.crt -subj "/CN=127.0.0.1"
+      - sudo openssl req -new -x509 -sha256 -nodes -days 365 -key /projects/ssl/ca.key -out /projects/ssl/ca.crt -subj "/CN=CA" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+          - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
+        - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
         - SSL Information
           - Distinguished Name (DN)
             - This contains a lot of information in the SSL certificate. This includes the Common Name, Organization, Organizational Unit, Locality, State, and Country.
@@ -248,18 +250,24 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
     - If you want to instead use prompts to answer all of the aspects of the Distinguished name.
       - sudo openssl req -new -x509 -sha256 -key /projects/ssl/ca.key -out /projects/ssl/ca.crt
     - You can also do these first 2 steps in one action using this commands
-      - sudo openssl req -new -x509 -days 365 -nodes -text -out /projects/ssl/ca.crt -keyout /projects/ssl/ca.key -subj "/CN=127.0.0.1"
+      - sudo openssl req -new -x509 -days 365 -nodes -text -out /projects/ssl/ca.crt -keyout /projects/ssl/ca.key -subj "/CN=CA" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+          - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
+        - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
 - Create the Server Certificate and Keys
   - Generating a private key for the server certificate
     - Using RSA again, if you want to use a different type refer to the first step
       - sudo openssl genrsa -out /projects/ssl/server.key 2048
   - Generate the server certificate signing request
-    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/server.key -out /projects/ssl/server.csr -subj "/CN=127.0.0.1"
+    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/server.key -out /projects/ssl/server.csr -subj "/CN=Server" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
       - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+        - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
+        - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
       - Instead of this you can create the private key and signing request in one step with
-      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/server.crt -keyout /projects/ssl/server.key -subj "/CN=127.0.0.1"
+      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/server.crt -keyout /projects/ssl/server.key -subj "/CN=Server" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+          - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
+        - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
   - Generate the X509 certificate for the server, the certificate chain
     - sudo openssl x509 -req -sha256 -days 365 -CAcreateserial -in /projects/ssl/server.csr -CA /projects/ssl/ca.crt -CAkey /projects/ssl/ca.key -out /projects/ssl/server.crt
   - (Optional) If you need to combine the private key and public key together do this to create a pfx file.
@@ -273,11 +281,15 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
     - Using RSA again, if you want to use a different type refer to the first step
       - sudo openssl genrsa -out /projects/ssl/client.key 2048
   - Generate the client certificate signing request
-    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/client.key -out /projects/ssl/client.csr -subj "/CN=127.0.0.1"
+    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/client.key -out /projects/ssl/client.csr -subj "/CN=Client" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
       - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+        - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
+        - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
       - Instead of this you can create the private key and signing request in one step with
-      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/client.crt -keyout /projects/ssl/client.key -subj "/CN=127.0.0.1"
+      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/client.crt -keyout /projects/ssl/client.key -subj "/CN=Client" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+          - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
+        - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
   - Generate the X509 certificate for the client
     - sudo openssl x509 -req -sha256 -days 365 -CAcreateserial -in /projects/ssl/client.csr -CA /projects/ssl/ca.crt -CAkey /projects/ssl/ca.key -out /projects/ssl/client.crt
   - (Optional) If you need to combine the private key and public key together do this to create a pfx file.
