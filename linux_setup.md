@@ -202,8 +202,49 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
     - Creating a simple certificate
       - sudo openssl req -new -x509 -sha256 -nodes -days 365 -key /projects/ssl/ca.key -out /projects/ssl/ca.crt -subj "/CN=127.0.0.1"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
-        - CN stands for Common Name or the Fully Qualified Domain Name (FQDN). This is the value in the DN (Distinguished Name). It is made up of the host domain, such as "your_website.com", but isn't a url and doesn't contain any protocols, ports, etc.
-        - DN stands for Distinguished Name. This contains a lot of information in the SSL certificate. This includes the Common Name, Organization, Organizational Unit, Locality, State, and Country.
+        - SSL Information
+          - Distinguished Name (DN)
+            - This contains a lot of information in the SSL certificate. This includes the Common Name, Organization, Organizational Unit, Locality, State, and Country.
+          - Common Name (CN), or the Fully Qualified Domain Name (FQDN)
+            - This is the value in the Distinguished Name (DN). It is made up of the host domain, such as "your_website.com", but isn't a url and doesn't contain any protocols, ports, etc.
+          - Subject Alternative Name (SAN)
+            - Used for letting a single certificate protect more than one website.
+          - Organization (O)
+            - What company or group owns this certificate.
+          - Organizational Unit (OU)
+            - What part of that organization owns this certificate.
+          - Country (C)
+            - The country where this certificate is from.
+          - State (S)
+            - What State or Province where this certificate is from.
+          - Locality (L)
+            - What city or town where this certificate is from.
+          - Validity Period
+            - When this certificate will expire and must be renewed, also the start date and time.
+          - Issuing Certificate Authority (CA)
+            - Who is issuing this certificate.
+          - Serial Number
+            - A unique identifier that is given to every SSL certificate.
+          - Public Key
+            - The public key of this SSL certificate. This lets users encrypt their information and send it to the server. The data will then be decrypted though the servers matching private key. The private key generates the public key. The private key can decrypt data encrypted with the public key, but the public key can't decrypt the data it encrypted. This lets anyone send the server securely encrypted information that only the server can decrypt. This is known as asymmetric encryption. It is a one-way encryption where one party with the public key can encrypt and one part with the private key can decrypt. As opposed to symmetric encryption where both parties would be able to encrypt and decrypt with the same key.
+          - Signature Algorithm
+            - This is an algorithm used to check if an SSL certificate is valid.
+          - Key Usage (KU)
+            - The activities that the key can perform and is supposed to do.
+          - Extended Key Usage (EKU)
+            - The activities that a key can perform, but doesn't specify if they should.
+          - Certificate Policies
+            - Policies that describe how the SSL certificate is to be used.
+          - CRL Distribution Points (CDP)
+            - A list of SSL certificates that aren't trustworthy.
+          - Authority Information Access (AIA)
+            - Where to find information about the issuer of the certificate.
+          - Subject Key Identifier (SKI)
+            - A unique identifier that is used to confirm that this is the right server to talk to.
+          - Authority Key Identifier (AKI)
+            - A unique identifier that is used to confirm that you're talking to the right authority.
+          - Basic Constraints
+            - Basic rules that tell connections what this certificate can do. Such as if it can create other certificates.
     - If you want to instead use prompts to answer all of the aspects of the Distinguished name.
       - sudo openssl req -new -x509 -sha256 -key /projects/ssl/ca.key -out /projects/ssl/ca.crt
     - You can also do these first 2 steps in one action using this commands
@@ -220,7 +261,7 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
       - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/server.crt -keyout /projects/ssl/server.key -subj "/CN=127.0.0.1"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
   - Generate the X509 certificate for the server, the certificate chain
-    - sudo openssl x509 -req -sha256 -days 365 -set_serial 01 -in /projects/ssl/server.csr -CA /projects/ssl/ca.crt -CAkey /projects/ssl/ca.key -out /projects/ssl/server.crt
+    - sudo openssl x509 -req -sha256 -days 365 -CAcreateserial -in /projects/ssl/server.csr -CA /projects/ssl/ca.crt -CAkey /projects/ssl/ca.key -out /projects/ssl/server.crt
   - (Optional) If you need to combine the private key and public key together do this to create a pfx file.
     - sudo openssl pkcs12 -export -keypbe NONE -certpbe NONE -nomaciter -passout pass: -out /projects/ssl/server.pfx -inkey /projects/ssl/server.key -in /projects/ssl/server.crt
     - You can then convert it back into text like this I believe
@@ -238,7 +279,7 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
       - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/client.crt -keyout /projects/ssl/client.key -subj "/CN=127.0.0.1"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
   - Generate the X509 certificate for the client
-    - sudo openssl x509 -req -sha256 -days 365 -set_serial 01 -in /projects/ssl/client.csr -CA /projects/ssl/ca.crt -CAkey /projects/ssl/ca.key -out /projects/ssl/client.crt
+    - sudo openssl x509 -req -sha256 -days 365 -CAcreateserial -in /projects/ssl/client.csr -CA /projects/ssl/ca.crt -CAkey /projects/ssl/ca.key -out /projects/ssl/client.crt
   - (Optional) If you need to combine the private key and public key together do this to create a pfx file.
     - sudo openssl pkcs12 -export -keypbe NONE -certpbe NONE -nomaciter -passout pass: -out /projects/ssl/client.pfx -inkey /projects/ssl/client.key -in /projects/ssl/client.crt
     - You can then convert it back into text like this I believe
