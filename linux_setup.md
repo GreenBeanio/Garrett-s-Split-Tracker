@@ -185,6 +185,101 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
           - The private key
           - This is the key file. Sometimes this is named as your_domain.key
 
+## Alternative Self-Hosted SSL using OpenSSL
+
+- Install OpenSSL
+  - sudo apt-get install openssl
+- Creating the Certificate Authority Certificate and Keys
+  - Create the self-signed certificate authority private key
+    - I'm using RSA (it's the most common method)
+      - sudo openssl genrsa -out /projects/ssl/ca.key 2048
+    - I found server other ways to do this. Here are some examples.
+      - Using Elliptic Curve instead
+        - sudo openssl ecparam -name prime256v1 -genkey -noout -out /projects/ssl/ca.key
+      - Using AES for an encrypted private key
+        - sudo openssl genrsa -aes256 -out /projects/ssl/ca.key 4096
+  - Create the self-signed certificate authority certificate
+    - Creating a simple certificate
+      - sudo openssl req -new -x509 -sha256 -nodes -days 365 -key /projects/ssl/ca.key -out /projects/ssl/ca.crt -subj "/CN=127.0.0.1"
+        - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+        - CN stands for Common Name or the Fully Qualified Domain Name (FQDN). This is the value in the DN (Distinguished Name). It is made up of the host domain, such as "your_website.com", but isn't a url and doesn't contain any protocols, ports, etc.
+        - DN stands for Distinguished Name. This contains a lot of information in the SSL certificate. This includes the Common Name, Organization, Organizational Unit, Locality, State, and Country.
+    - If you want to instead use prompts to answer all of the aspects of the Distinguished name.
+      - sudo openssl req -new -x509 -sha256 -key /projects/ssl/ca.key -out /projects/ssl/ca.crt
+    - You can also do these first 2 steps in one action using this commands
+      - sudo openssl req -new -x509 -days 365 -nodes -text -out /projects/ssl/ca.crt -keyout /projects/ssl/ca.key -subj "/CN=127.0.0.1"
+        - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+- Create the Server Certificate and Keys
+  - Generating a private key for the server certificate
+    - Using RSA again, if you want to use a different type refer to the first step
+      - sudo openssl genrsa -out /projects/ssl/server.key 2048
+  - Generate the server certificate signing request
+    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/server.key -out /projects/ssl/server.csr -subj "/CN=127.0.0.1"
+      - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+      - Instead of this you can create the private key and signing request in one step with
+      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/server.crt -keyout /projects/ssl/server.key -subj "/CN=127.0.0.1"
+        - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+  - Generate the X509 certificate for the server, the certificate chain
+    - sudo openssl x509 -req -sha256 -days 365 -set_serial 01 -in /projects/ssl/server.csr -CA /projects/ssl/ca.crt -CAkey /projects/ssl/ca.key -out /projects/ssl/server.crt
+  - (Optional) If you need to combine the private key and public key together do this to create a pfx file.
+    - sudo openssl pkcs12 -export -keypbe NONE -certpbe NONE -nomaciter -passout pass: -out /projects/ssl/server.pfx -inkey /projects/ssl/server.key -in /projects/ssl/server.crt
+    - You can then convert it back into text like this I believe
+      - sudo openssl rsa -in /projects/ssl/server.pfx -out /projects/ssl/server_nopass.pfx
+    - To create an encrypted file use
+      - sudo openssl pkcs12 -export -out /projects/ssl/server.pfx -inkey /projects/ssl/server.key -in /projects/ssl/server.crt
+- Create the Client Certificate and Keys
+  - Create the client certificate private key
+    - Using RSA again, if you want to use a different type refer to the first step
+      - sudo openssl genrsa -out /projects/ssl/client.key 2048
+  - Generate the client certificate signing request
+    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/client.key -out /projects/ssl/client.csr -subj "/CN=127.0.0.1"
+      - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+      - Instead of this you can create the private key and signing request in one step with
+      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/client.crt -keyout /projects/ssl/client.key -subj "/CN=127.0.0.1"
+        - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
+  - Generate the X509 certificate for the client
+    - sudo openssl x509 -req -sha256 -days 365 -set_serial 01 -in /projects/ssl/client.csr -CA /projects/ssl/ca.crt -CAkey /projects/ssl/ca.key -out /projects/ssl/client.crt
+  - (Optional) If you need to combine the private key and public key together do this to create a pfx file.
+    - sudo openssl pkcs12 -export -keypbe NONE -certpbe NONE -nomaciter -passout pass: -out /projects/ssl/client.pfx -inkey /projects/ssl/client.key -in /projects/ssl/client.crt
+    - You can then convert it back into text like this I believe
+      - sudo openssl rsa -in /projects/ssl/client.pfx -out /projects/ssl/client_nopass.pfx
+    - To create an encrypted file use
+      - sudo openssl pkcs12 -export -out /projects/ssl/client.pfx -inkey /projects/ssl/client.key -in /projects/ssl/client.crt
+- Verifying the certificates
+  - Verify the server certificate
+    - sudo openssl verify -CAfile /projects/ssl/ca.crt /projects/ssl/ca.crt /projects/ssl/server.crt
+      - You can also try this as well
+        - sudo openssl verify -CAfile /projects/ssl/ca.crt -untrusted /projects/ssl/ca.crt /projects/ssl/server.crt
+  - Verify the client certificate
+    - sudo openssl verify -CAfile /projects/ssl/ca.crt /projects/ssl/ca.crt /projects/ssl/client.crt
+      - You can also try this as well
+        - sudo openssl verify -CAfile /projects/ssl/ca.crt -untrusted /projects/ssl/ca.crt /projects/ssl/client.crt
+- Viewing information about the certificates
+  - sudo openssl x509 -noout -text -in /projects/ssl/client.crt
+    - If using a different encoding you may need to use one of these
+      - sudo openssl x509 -inform pem -noout -text -in /projects/ssl/client.crt
+      - sudo openssl x509 -inform der -noout -text -in /projects/ssl/client.crt
+- Files
+  - Certificate Authority
+    - ca.crt
+      - This is the public key for self-signed certificate authority certificate.
+    - ca.key
+      - This is the private key for the self-signed certificate authority.
+  - Server
+    - server.crt
+      - This is the public key for the server.
+    - server.key
+      - This is the private key for the server.
+    - server.csr
+      - This is an intermediary file that contains the information needed to generate a SSL/TLS certificate.
+  - Client
+    - client.crt
+      - This is the public key for the client.
+    - client.key
+      - This is the private key for the client.
+    - client.csr
+      - This is an intermediary file that contains the information needed to generate a SSL/TLS certificate.
+
 ## Installing PostgreSQL
 
 ### Creating a new user
@@ -273,18 +368,11 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
     </code></pre>
   - Note that this does not require ssl, it only allows the possibility of ssl. To require ssl you need to comment out all of the other "host" lines, at least the "all" ones (I'm not sure about the replication ones).
     - If you're intending to connect with the modes "disable", "allow", "prefer", or "require" that will work. However, if you're going to use "verify-ca" or "verify-full" you will need to do more work.
-      - Modify the hostssl line so that "md5" is "cert clientcert=verify-ca" or "cert clientcert=verify-full"
-      - Create the files that postgres will look for
-        - sudo mkdir /var/lib/postgresql/.postgresql
-      - Copy the keys
-        - sudo cp /projects/ssl/live/your_domain/fullchain.pem /var/lib/postgresql/.postgresql/root.crt
-        - sudo cp /projects/ssl/live/your_domain/cert.pem /var/lib/postgresql/.postgresql/postgres.crt ##
-        - sudo cp /projects/ssl/live/your_domain/privkey.pem /var/lib/postgresql/.postgresql/postgres.key ##
-        - sudo chown -R postgres:postgres /var/lib/postgresql/.postgresql/
-        - sudo chmod -R u=rwx,g=,o= /var/lib/postgresql/.postgresql/
+
     - Testing domain with hosts?
       - sudo vim /etc/hosts
-      -
+        - Add a line similar to
+        - 127.0.0.1     your_domain
 
     - WILL NEED TO WRITE A SCRIPT TO DO THIS WHEN UPDATING THE SSL TOO ################
     - You can also comment out the "local" lines as well, but that's up to you. I'd only do this to test out the connection locally.
@@ -330,9 +418,9 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
     - sudo -u postgres psql postgres "sslmode=require host=localhost"
       - sudo -u postgres psql "user=split_user sslmode=require host=localhost dbname=split_tracker"
   - Verify-CA #####
-    - sudo -u postgres psql "user=split_user sslmode=verify-ca host=localhost dbname=split_tracker sslcert="
+    - sudo -u postgres psql -U split_user "user=split_user sslmode=verify-full host=yourearat.com port=5432 dbname=split_tracker sslrootcert=chain.pem sslcert=fullchain.pem sslkey=privkey.pem"
   - Verify-Full #######
-    - sudo -u postgres psql "user=split_user sslmode=verify-full host=localhost dbname=split_tracker sslrootcert=xx sslcrl="
+    - sudo -u postgres psql -U split_user "user=split_user sslmode=verify-full host=yourearat.com port=5432 dbname=split_tracker sslrootcert=chain.pem sslcert=fullchain.pem sslkey=privkey.pem"
 - Create a password for your super user
   - \password postgres
 - Create the user for the application
