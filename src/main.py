@@ -89,7 +89,9 @@ def index() -> None:
 
 # Start the flask app
 if __name__ == "__main__":
-    flask_app_blue.run(host="0.0.0.0", port=5000, debug=True)
+    flask_app_blue.run(
+        host=app_config.flask_host, port=app_config.flask_port, debug=app_config.debug
+    )
 
 # Then use these cli commands (running flask first seems to matter, but the order of these 2 doesn't really,
 # but I start the beat first because the worker needs it):

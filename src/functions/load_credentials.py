@@ -149,6 +149,9 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             # Secret key for flask
             secret_key=json_obj["SECRET_KEY"],
             testing=json_obj["TESTING"],
+            debug=json_obj["DEBUG"],
+            flask_host=json_obj["FLASK_HOST"],
+            flask_port=json_obj["FLASK_PORT"],
             # Mongo config
             mongo_addr=json_obj["MONGO_ADDRESS"],
             mongo_port=json_obj["MONGO_PORT"],
@@ -189,6 +192,9 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             # General
             "SECRET_KEY": "YOUR_SECRET_KEY",
             "TESTING": "TRUE_OR_FALSE",
+            "DEBUG": "TRUE_OR_FALSE",
+            "FLASK_HOST": "YOUR_FLASK_HOST (Default 0.0.0.0)",
+            "FLASK_PORT": "YOUR_FLASK_PORT (Default 5000)",
             # Mongodb
             "MONGO_ADDRESS": "ADDRESS_TO_MONGO",
             "MONGO_PORT": "MONGO_PORT",

@@ -10,6 +10,10 @@ Maybe add notes on setting up the basic linux stuff like disabling passwords and
 
 - Creating the group
   - sudo groupadd databases
+- Add whatever user your currently using to the group
+  - sudo usermod -a -G databases your_user
+- Reload the user
+  - sudo su - your_user
 
 ## Creating a user to access this project (for backups and stuff)
 
@@ -161,16 +165,25 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
     - Run this to make it accessible. (Not sure if this will become a problem later, but we need to be able to access it)
       - sudo chmod -R u=rwx,g=rwx,o=rx /projects/ssl
       - sudo chown split_tracker:databases /projects/ssl
+      - That didn't seem to work so do this too
+        - sudo chmod -R u=rwx,g=rx,o= /projects/ssl/
+        - sudo chown -R root:databases /projects/ssl/
+        - sudo chmod -R u=rwx,g=r,o= /projects/ssl/live/youre_domain/*
+          - This is changing the permissions of a system link and it shouldn't change the permissions because the source file permissions are what matter, but it seemed to work.
     - Notes:
       - Certbot will return 4 files:
         - cert.pem
           - The public key. However, this one shouldn't be used with most software.
+          - This is just the certificate.
         - chain.pem
           - The certificate chain.
+          - This is the intermediary signed authority that is signed by the root authority.
         - fullchain.pem
           - The certificate that you will use in most server software. It is a combination of the cert.pem and the chain.pem
+          - This is the crt file. Sometimes this is named as your_domain.crt
         - privkey.pem
           - The private key
+          - This is the key file. Sometimes this is named as your_domain.key
 
 ## Installing PostgreSQL
 
@@ -234,6 +247,8 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
   - sudo systemctl start postgresql
   - sudo systemctl status postgresql
     - If it's active then good. If not check the path you entered.
+    - Actually for postgres that one might be a lie because it starts other services. Do this instead.
+      - sudo systemctl status 'postgresql*'
   - sudo systemctl stop postgresql
 
 ### Adding SSL
@@ -243,9 +258,9 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
   - Find and modify, or add, the following. You will need to change the path to match the domain name you used. You can find it by running "sudo ls /projects/ssl/live/"
     - <pre><code>
     ssl = on
-    #ssl_ca_file = '/projects/ssl/live/youredomain.xxx/chain.pem'
-    #ssl_cert_file = '/projects/ssl/live/youredomain.xxx/cert.pem'
-    ssl_cert_file = '/projects/ssl/live/youredomain.xxx/fullchain.pem'
+    ssl_ca_file = '/projects/ssl/live/youredomain.xxx/chain.pem'
+    ssl_cert_file = '/projects/ssl/live/youredomain.xxx/cert.pem'
+    #ssl_cert_file = '/projects/ssl/live/youredomain.xxx/fullchain.pem'
     ssl_key_file = '/projects/ssl/live/youredomain.xxx/privkey.pem'
     ssl_ciphers = 'HIGH:MEDIUM:+3DES:!aNULL'
     ssl_prefer_server_ciphers = on
@@ -256,6 +271,23 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
     - <pre><code>
     hostssl  all         all          0.0.0.0/0      md5
     </code></pre>
+  - Note that this does not require ssl, it only allows the possibility of ssl. To require ssl you need to comment out all of the other "host" lines, at least the "all" ones (I'm not sure about the replication ones).
+    - If you're intending to connect with the modes "disable", "allow", "prefer", or "require" that will work. However, if you're going to use "verify-ca" or "verify-full" you will need to do more work.
+      - Modify the hostssl line so that "md5" is "cert clientcert=verify-ca" or "cert clientcert=verify-full"
+      - Create the files that postgres will look for
+        - sudo mkdir /var/lib/postgresql/.postgresql
+      - Copy the keys
+        - sudo cp /projects/ssl/live/your_domain/fullchain.pem /var/lib/postgresql/.postgresql/root.crt
+        - sudo cp /projects/ssl/live/your_domain/cert.pem /var/lib/postgresql/.postgresql/postgres.crt ##
+        - sudo cp /projects/ssl/live/your_domain/privkey.pem /var/lib/postgresql/.postgresql/postgres.key ##
+        - sudo chown -R postgres:postgres /var/lib/postgresql/.postgresql/
+        - sudo chmod -R u=rwx,g=,o= /var/lib/postgresql/.postgresql/
+    - Testing domain with hosts?
+      - sudo vim /etc/hosts
+      -
+
+    - WILL NEED TO WRITE A SCRIPT TO DO THIS WHEN UPDATING THE SSL TOO ################
+    - You can also comment out the "local" lines as well, but that's up to you. I'd only do this to test out the connection locally.
 - Test that it works
   - sudo systemctl start postgresql
   - sudo systemctl status postgresql
@@ -263,8 +295,6 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
   - sudo systemctl stop postgresql
 
 ### Setting up
-
-The configuration file can be found at "/etc/postgresql/\*/main/postgresql.conf" if needed (the \* is your version of postgreSQL)
 
 - Add the created user to the group
   - sudo usermod -a -G databases postgres
@@ -279,7 +309,6 @@ The configuration file can be found at "/etc/postgresql/\*/main/postgresql.conf"
   - sudo systemctl status postgresql
   - Enable it on boot
   - sudo systemctl enable postgresql
-
 - Stuff from the documentation (other method)
   - Starting the database with a data directory
   - In the background
@@ -291,8 +320,40 @@ The configuration file can be found at "/etc/postgresql/\*/main/postgresql.conf"
   - With user
     - su postgres -c 'pg_ctl start -D /usr/local/pgsql/data -l serverlog'
 
-- To use the shell
-  - sudo -u postgres psql
+### Setting up PostgreSQL
+
+- Enter the shell as the super user
+  - No SSL
+    - sudo -u postgres psql postgres
+      - sudo -u postgres psql "user=split_user host=localhost dbname=split_tracker"
+  - Required
+    - sudo -u postgres psql postgres "sslmode=require host=localhost"
+      - sudo -u postgres psql "user=split_user sslmode=require host=localhost dbname=split_tracker"
+  - Verify-CA #####
+    - sudo -u postgres psql "user=split_user sslmode=verify-ca host=localhost dbname=split_tracker sslcert="
+  - Verify-Full #######
+    - sudo -u postgres psql "user=split_user sslmode=verify-full host=localhost dbname=split_tracker sslrootcert=xx sslcrl="
+- Create a password for your super user
+  - \password postgres
+- Create the user for the application
+  - CREATE USER split_user WITH password 'your_password';
+- Create the database for the application
+  - CREATE DATABASE split_tracker;
+- Grant the user permissions to the database
+  - GRANT ALL PRIVILEGES ON DATABASE "split_tracker" to split_user;
+- You can see user information with these commands
+  - Commands
+    - psql commands
+      - \?
+    - SQL commands
+      - \help
+  - Roles for users
+    - \du
+      - \du+
+  - Databases
+    - \l
+  - List tables
+    - \d
 
 ## Installing MongoDB
 
@@ -337,7 +398,7 @@ The configuration file can be found at "/etc/postgresql/\*/main/postgresql.conf"
 ### Changing the dbPath (because I want to)
 
 - Create the directory
-  - sudo mkdir /projects/mnongodb
+  - sudo mkdir /projects/mongodb
   - sudo chown mongodb:databases /projects/mongodb
   - sudo chmod u=rwx,g=rx,o= /projects/mongodb
 - Go into the configuration file
@@ -368,8 +429,6 @@ The configuration file can be found at "/etc/postgresql/\*/main/postgresql.conf"
 
 ### Setting up
 
-The configuration file can be found at "/etc/mongod.conf" if needed
-
 - Add the created user to the group
   - sudo usermod -a -G databases mongodb
 
@@ -383,8 +442,45 @@ The configuration file can be found at "/etc/mongod.conf" if needed
   - sudo systemctl stop mongod
   - sudo systemctl restart mongod
 
+### Setting up Mongodb
+
+- If you are able to connect without opening the ports with SSL enabled good on you. I wasn't able to. Instead I did this temporarily.
+  - sudo systemctl stop mongod
+  - sudo vim /etc/mongod.conf
+    - Change "mode: requireTLS" to "mode: preferTLS" or even "mode: allowTLS"
+  - sudo systemctl start mongod
 - To use the shell
-  - mongosh
+  - sudo mongosh
+    - If using ssl it'll be something akin to this
+      - sudo mongosh --host mongo.yourearat.com --tls --tlsCAFile fullchain.pem
+        - ############## TEMP: Check that this is correct later #######################
+- Helpful commands
+  - Shows mongosh commands
+    - help
+  - Shows database comamnds
+    - db.help()
+  - You can run this to see your current user
+    - db.runCommand({connectionStatus: 1})
+      - Shouldn't really show anything now since we're the shell
+  - Show the users
+    - use admin
+    - db.system.users.find()
+- If you want you can create a root user
+  - use admin
+  - db.createUser({user: "root", pwd: "your_password", roles : ["root"]})
+- Creating a database for the application
+  - Create the database by switching to it
+    - use split_tracker;
+  - Create a table temporarily so that it will save the database
+    - db.createCollection("users");
+- Creating the user for the database
+  - db.createUser({user: "split_user", pwd: "your_password", roles : [{role: "readWrite", db: "split_tracker"}]});
+- If we changed this earlier change it back
+  - exit
+  - sudo systemctl stop mongod
+  - sudo vim /etc/mongod.conf
+    - Change it back to "mode: requireTLS"
+  - sudo systemctl start mongod
 
 ## Installing Redis
 
@@ -458,8 +554,6 @@ The configuration file can be found at "/etc/mongod.conf" if needed
 
 ### Setting up
 
-The configuration file can be found at "/etc/redis/redis.conf" if needed
-
 - Add the created user to the group
   - sudo usermod -a -G databases redis
 
@@ -470,7 +564,121 @@ The configuration file can be found at "/etc/redis/redis.conf" if needed
 - Enable it on boot
   - sudo systemctl enable redis-server
 
-## Need to port forward
+### Setting up Redis
+
+- Enter redis
+  - sudo redis-cli
+    - With ssl I think it should be something like this
+      - redis-cli --tls --cert cert.pem --key privkey.pem --cacert chain.pem
+        - ######### Need to check this later #################
+          - redis-cli -h hostname -p port --tls --cert cert.pem --key privkey.pem --cacert chain.pem
+    - I couldn't connect because of ssl and not having it set up yet. Instead I did this
+      - sudo systemctl stop redis-server
+        - You may have to manually kill the process if that doesn't work
+          - "sudo htop" is how I prefer to do that
+      - sudo vim /etc/redis/redis.conf
+        - Temporarily comment out the following lines
+        - <pre><code>
+        port 0
+        tls-port 6379
+        </code></pre>
+      - sudo systemctl start redis-server
+      - sudo redis-cli
+- Create an admin user
+  - acl setuser admin on >your_password allcommands allkeys
+- You can do these for more information
+  - Redis help
+    - help
+  - Help list for acl
+    - acl help
+  - List of users
+    - acl list
+  - select #
+    - Selects a specific database instance on redis. by default there are 16 and this can be edited in the config file by changing the "databases" setting.
+- Create a user for the application to use
+  - Create the user
+    - acl setuser split_tracker on >your_password
+  - Allow the user to be able to use all commands, but only on keys the start with "split_tracker:"
+    - acl setuser split_tracker allcommands ~split_tracker:*
+      - You can clear the commands by doing "nocommands"
+      - You can remove commands by doing "-commandName"
+      - You can add commands by doing "-commandsName"
+      - You can remove all key patterns with "resetkeys"
+      - You can add key patterns with "~keyPattern", with read and write permissions
+      - You can do "%R~keyPattern" to add a key pattern with only read permissions
+      - You can do "%W~keyPattern" to add a key pattern with only write permissions
+- Create a user for celery to use
+  - Create the user
+    - acl setuser celery on >your_password
+  - Allow the user to be able to use all commands, but only on keys the start with "_kombu"
+    - acl setuser celery allcommands ~_kombu*
+      - I'm not sure about this one yet. ############################# I believe celery always adds that to the keys it adds, but maybe I'm wrong.
+- Disable the default user
+  - acl setuser default off
+    - This should prevent any anonymous connections now
+- Login to redis-cli
+  - With auth command
+    - redis-cli
+    - auth username password
+  - Directly
+    - redis-cli -u "redis://split_tracker:your_password@host:port"
+      - This might be wonky depending on your password it might mess with bash
+- If you modified the config file before making these modifications
+  - shutdown
+    - Do this while inside of redis-cli to shut the server off
+  - sudo vim /etc/redis/redis.conf
+    - Uncomment the following lines
+    - <pre><code>
+        port 0
+        tls-port 6379
+        </code></pre>
+    - sudo systemctl start redis-server
+
+## Port Forwarding
+
+### Needed for databases
+
+- Port Forwarding on the Server
+  - PostgreSQL
+    - The default port is 5432
+    - sudo ufw allow from any to any port 5432 proto tcp comment 'Split_Tracker: PostgreSQL'
+      - If we only want to allow the connection from a known address use this
+        - sudo ufw allow from ip_address_from to any port 5432 proto tcp comment 'Split_Tracker: PostgreSQL'
+  - MongoDB
+    - The default port is 27017
+    - sudo ufw allow from any to any port 27017 proto tcp comment 'Split_Tracker: MongoDB'
+      - To allow only from a specific IP adjust like the PostgreSQL example
+  - Redis
+    - The default port is 6379
+    - sudo ufw allow from any to any port 6379 proto tcp comment 'Split_Tracker: Redis'
+      - To allow only from a specific IP adjust like the PostgreSQL example
+
+### Probably need
+
+- Flask
+  - The default port is 5000
+  - sudo ufw allow from any to any port 5000 proto tcp comment 'Split_Tracker: Flask'
+    - To allow only from a specific IP adjust like the PostgreSQL example
+
+- Port Forwarding on your router or VPS
+  - This will depend on your specific device or server provider. You will have to follow their instructions.
+  - You will need to do this if you're using SSL. You could possibly use a self signed certificate instead of Let's Encrypt. However, if you followed these instructions and are using a domain you will need to forward the port publically.
+    - You could also probably spoof your domain by modifying the hosts file at "/etc/hosts" by adding a line similiar to "
+
+### Possible
+
+- HTTP
+  - The default port is 80
+  - sudo ufw allow from any to any port 80 proto tcp comment 'Split_Tracker: HTTP'
+    - To allow only from a specific IP adjust like the PostgreSQL example
+- HTTPS
+  - The default port is 443
+  - sudo ufw allow from any to any port 443 proto tcp comment 'Split_Tracker: HTTPS'
+    - To allow only from a specific IP adjust like the PostgreSQL example
+- SSH
+  - The default port is 22
+  - sudo ufw allow from any to any port 22 proto tcp comment 'Split_Tracker: SSH'
+    - To allow only from a specific IP adjust like the PostgreSQL example
 
 ## Installing Python?
 
@@ -487,13 +695,3 @@ The configuration file can be found at "/etc/redis/redis.conf" if needed
 - nginx enabled sites are at "/etc/nginx/sites-enabled"
 
 ## Setting up gunicorn for flask?
-
-## Ports (Just Notes)
-
-- SSH: 22
-- PostgreSQL: 5432
-- MongoDB: 27017
-- Redis: 6379
-- Flask:
-- HTTP: 80
-- HTTPS: 443
