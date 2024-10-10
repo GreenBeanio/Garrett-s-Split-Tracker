@@ -6,6 +6,41 @@ Assuming using Ubuntu 22.04.1 LTS jammy
 
 Maybe add notes on setting up the basic linux stuff like disabling passwords and enabling ssh keys and stuff later. Creating ssh key to connect to it from your client and stuff too.
 
+- On your client machine, not the server
+  - Make the ssh directory if you don't already have it
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+  - Create the config file if you don't already have it
+    - touch ~/.ssh/config
+    - chmod 600 ~/.ssh/config
+  - Generate ssh keys
+    - ssh-keygen -t ed25519 -f ~/.ssh/desired_name
+  - Add it to your config file
+    - <pre><code>
+        Host desired_name
+            HostName address_to_server
+            User username
+            Port 22
+            IdentityFile ~/.ssh/desired_name
+      </code></pre>
+- Copy the key to your server
+  - ssh-copy-id -i ~/.ssh/desired_name user@server
+- Log into your server with a sudo user
+  - ssh desired_name
+- Allowing SSH
+  - sudo ufw allow 22/tcp
+- Disabling password based login
+  - sudo vim /etc/ssh/sshd_config
+    - Edit the following lines
+        <pre><code>
+        ChallengeResponseAuthentication no
+        PasswordAuthentication no
+        UsePAM no
+        PermitRootLogin no
+        #PermitRootLogin prohibit-password
+        </code></pre>
+  - Restart it
+    - sudo systemctl reload ssh
+
 ## Setting up group
 
 - Creating the group
@@ -187,20 +222,22 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
 
 ## Alternative Self-Hosted SSL using OpenSSL
 
+The rest of the documentation will be using path examples following the Let's Encrypt example. You will need to adjust the example paths if using this method.
+
 - Install OpenSSL
   - sudo apt-get install openssl
 - Creating the Certificate Authority Certificate and Keys
   - Create the self-signed certificate authority private key
     - I'm using RSA (it's the most common method)
-      - sudo openssl genrsa -out /projects/ssl/ca.key 2048
+      - sudo openssl genrsa -out /projects/ssl/self/yourdomain/ca.key 2048
     - I found server other ways to do this. Here are some examples.
       - Using Elliptic Curve instead
-        - sudo openssl ecparam -name prime256v1 -genkey -noout -out /projects/ssl/ca.key
+        - sudo openssl ecparam -name prime256v1 -genkey -noout -out /projects/ssl/self/yourdomain/ca.key
       - Using AES for an encrypted private key
-        - sudo openssl genrsa -aes256 -out /projects/ssl/ca.key 4096
+        - sudo openssl genrsa -aes256 -out /projects/ssl/self/yourdomain/ca.key 4096
   - Create the self-signed certificate authority certificate
     - Creating a simple certificate
-      - sudo openssl req -new -x509 -sha256 -nodes -days 365 -key /projects/ssl/ca.key -out /projects/ssl/ca.crt -subj "/CN=CA" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
+      - sudo openssl req -new -x509 -sha256 -nodes -days 365 -key /projects/ssl/self/yourdomain/ca.key -out /projects/ssl/self/yourdomain/ca.crt -subj "/CN=CA" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
           - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
         - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
@@ -248,70 +285,74 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
           - Basic Constraints
             - Basic rules that tell connections what this certificate can do. Such as if it can create other certificates.
     - If you want to instead use prompts to answer all of the aspects of the Distinguished name.
-      - sudo openssl req -new -x509 -sha256 -key /projects/ssl/ca.key -out /projects/ssl/ca.crt
+      - sudo openssl req -new -x509 -sha256 -key /projects/ssl/self/yourdomain/ca.key -out /projects/ssl/self/yourdomain/ca.crt
     - You can also do these first 2 steps in one action using this commands
-      - sudo openssl req -new -x509 -days 365 -nodes -text -out /projects/ssl/ca.crt -keyout /projects/ssl/ca.key -subj "/CN=CA" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
+      - sudo openssl req -new -x509 -days 365 -nodes -text -out /projects/ssl/self/yourdomain/ca.crt -keyout /projects/ssl/self/yourdomain/ca.key -subj "/CN=CA" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
           - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
         - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
 - Create the Server Certificate and Keys
   - Generating a private key for the server certificate
     - Using RSA again, if you want to use a different type refer to the first step
-      - sudo openssl genrsa -out /projects/ssl/server.key 2048
+      - sudo openssl genrsa -out /projects/ssl/self/yourdomain/server.key 2048
   - Generate the server certificate signing request
-    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/server.key -out /projects/ssl/server.csr -subj "/CN=Server" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
+    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/self/yourdomain/server.key -out /projects/ssl/self/yourdomain/server.csr -subj "/CN=Server" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
       - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
         - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
         - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
       - Instead of this you can create the private key and signing request in one step with
-      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/server.crt -keyout /projects/ssl/server.key -subj "/CN=Server" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
+      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/self/yourdomain/server.crt -keyout /projects/ssl/self/yourdomain/server.key -subj "/CN=Server" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
           - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
         - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
   - Generate the X509 certificate for the server, the certificate chain
-    - sudo openssl x509 -req -sha256 -days 365 -CAcreateserial -in /projects/ssl/server.csr -CA /projects/ssl/ca.crt -CAkey /projects/ssl/ca.key -out /projects/ssl/server.crt
+    - sudo openssl x509 -req -sha256 -days 365 -CAcreateserial -in /projects/ssl/self/yourdomain/server.csr -CA /projects/ssl/self/yourdomain/ca.crt -CAkey /projects/ssl/self/yourdomain/ca.key -out /projects/ssl/self/yourdomain/server.crt
   - (Optional) If you need to combine the private key and public key together do this to create a pfx file.
-    - sudo openssl pkcs12 -export -keypbe NONE -certpbe NONE -nomaciter -passout pass: -out /projects/ssl/server.pfx -inkey /projects/ssl/server.key -in /projects/ssl/server.crt
+    - sudo openssl pkcs12 -export -keypbe NONE -certpbe NONE -nomaciter -passout pass: -out /projects/ssl/self/yourdomain/server.pfx -inkey /projects/ssl/self/yourdomain/server.key -in /projects/ssl/self/yourdomain/server.crt
     - You can then convert it back into text like this I believe
-      - sudo openssl rsa -in /projects/ssl/server.pfx -out /projects/ssl/server_nopass.pfx
+      - sudo openssl rsa -in /projects/ssl/self/yourdomain/server.pfx -out /projects/ssl/self/yourdomain/server_nopass.pfx
     - To create an encrypted file use
-      - sudo openssl pkcs12 -export -out /projects/ssl/server.pfx -inkey /projects/ssl/server.key -in /projects/ssl/server.crt
+      - sudo openssl pkcs12 -export -out /projects/ssl/self/yourdomain/server.pfx -inkey /projects/ssl/self/yourdomain/server.key -in /projects/ssl/self/yourdomain/server.crt
 - Create the Client Certificate and Keys
   - Create the client certificate private key
     - Using RSA again, if you want to use a different type refer to the first step
-      - sudo openssl genrsa -out /projects/ssl/client.key 2048
+      - sudo openssl genrsa -out /projects/ssl/self/yourdomain/client.key 2048
   - Generate the client certificate signing request
-    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/client.key -out /projects/ssl/client.csr -subj "/CN=Client" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
+    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/self/yourdomain/client.key -out /projects/ssl/self/yourdomain/client.csr -subj "/CN=Client" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
       - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
         - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
         - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
       - Instead of this you can create the private key and signing request in one step with
-      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/client.crt -keyout /projects/ssl/client.key -subj "/CN=Client" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
+      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/self/yourdomain/client.crt -keyout /projects/ssl/self/yourdomain/client.key -subj "/CN=Client" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
           - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
         - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
   - Generate the X509 certificate for the client
-    - sudo openssl x509 -req -sha256 -days 365 -CAcreateserial -in /projects/ssl/client.csr -CA /projects/ssl/ca.crt -CAkey /projects/ssl/ca.key -out /projects/ssl/client.crt
+    - sudo openssl x509 -req -sha256 -days 365 -CAcreateserial -in /projects/ssl/self/yourdomain/client.csr -CA /projects/ssl/self/yourdomain/ca.crt -CAkey /projects/ssl/self/yourdomain/ca.key -out /projects/ssl/self/yourdomain/client.crt
   - (Optional) If you need to combine the private key and public key together do this to create a pfx file.
-    - sudo openssl pkcs12 -export -keypbe NONE -certpbe NONE -nomaciter -passout pass: -out /projects/ssl/client.pfx -inkey /projects/ssl/client.key -in /projects/ssl/client.crt
+    - sudo openssl pkcs12 -export -keypbe NONE -certpbe NONE -nomaciter -passout pass: -out /projects/ssl/self/yourdomain/client.pfx -inkey /projects/ssl/self/yourdomain/client.key -in /projects/ssl/self/yourdomain/client.crt
     - You can then convert it back into text like this I believe
-      - sudo openssl rsa -in /projects/ssl/client.pfx -out /projects/ssl/client_nopass.pfx
+      - sudo openssl rsa -in /projects/ssl/self/yourdomain/client.pfx -out /projects/ssl/self/yourdomain/client_nopass.pfx
     - To create an encrypted file use
-      - sudo openssl pkcs12 -export -out /projects/ssl/client.pfx -inkey /projects/ssl/client.key -in /projects/ssl/client.crt
+      - sudo openssl pkcs12 -export -out /projects/ssl/self/yourdomain/client.pfx -inkey /projects/ssl/self/yourdomain/client.key -in /projects/ssl/self/yourdomain/client.crt
 - Verifying the certificates
   - Verify the server certificate
-    - sudo openssl verify -CAfile /projects/ssl/ca.crt /projects/ssl/ca.crt /projects/ssl/server.crt
+    - sudo openssl verify -CAfile /projects/ssl/self/yourdomain/ca.crt /projects/ssl/self/yourdomain/ca.crt /projects/ssl/self/yourdomain/server.crt
       - You can also try this as well
-        - sudo openssl verify -CAfile /projects/ssl/ca.crt -untrusted /projects/ssl/ca.crt /projects/ssl/server.crt
+        - sudo openssl verify -CAfile /projects/ssl/self/yourdomain/ca.crt -untrusted /projects/ssl/self/yourdomain/ca.crt /projects/ssl/self/yourdomain/server.crt
   - Verify the client certificate
-    - sudo openssl verify -CAfile /projects/ssl/ca.crt /projects/ssl/ca.crt /projects/ssl/client.crt
+    - sudo openssl verify -CAfile /projects/ssl/self/yourdomain/ca.crt /projects/ssl/self/yourdomain/ca.crt /projects/ssl/self/yourdomain/client.crt
       - You can also try this as well
-        - sudo openssl verify -CAfile /projects/ssl/ca.crt -untrusted /projects/ssl/ca.crt /projects/ssl/client.crt
+        - sudo openssl verify -CAfile /projects/ssl/self/yourdomain/ca.crt -untrusted /projects/ssl/self/yourdomain/ca.crt /projects/ssl/self/yourdomain/client.crt
 - Viewing information about the certificates
-  - sudo openssl x509 -noout -text -in /projects/ssl/client.crt
+  - sudo openssl x509 -noout -text -in /projects/ssl/self/yourdomain/client.crt
     - If using a different encoding you may need to use one of these
-      - sudo openssl x509 -inform pem -noout -text -in /projects/ssl/client.crt
-      - sudo openssl x509 -inform der -noout -text -in /projects/ssl/client.crt
+      - sudo openssl x509 -inform pem -noout -text -in /projects/ssl/self/yourdomain/client.crt
+      - sudo openssl x509 -inform der -noout -text -in /projects/ssl/self/yourdomain/client.crt
+- Changing ownership and permissions
+  - sudo chmod -R u=rwx,g=rx,o= /projects/ssl/self/yourdomain/
+- sudo chown -R root:databases /projects/ssl/self/yourdomain/
+- sudo chmod -R u=rwx,g=r,o= /projects/ssl/self/yourdomain/*
 - Files
   - Certificate Authority
     - ca.crt
@@ -406,9 +447,9 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
   - Find and modify, or add, the following. You will need to change the path to match the domain name you used. You can find it by running "sudo ls /projects/ssl/live/"
     - <pre><code>
     ssl = on
-    ssl_ca_file = '/projects/ssl/live/youredomain.xxx/chain.pem'
-    ssl_cert_file = '/projects/ssl/live/youredomain.xxx/cert.pem'
-    #ssl_cert_file = '/projects/ssl/live/youredomain.xxx/fullchain.pem'
+    #ssl_ca_file = '/projects/ssl/live/youredomain.xxx/chain.pem'
+    #ssl_cert_file = '/projects/ssl/live/youredomain.xxx/cert.pem'
+    ssl_cert_file = '/projects/ssl/live/youredomain.xxx/fullchain.pem'
     ssl_key_file = '/projects/ssl/live/youredomain.xxx/privkey.pem'
     ssl_ciphers = 'HIGH:MEDIUM:+3DES:!aNULL'
     ssl_prefer_server_ciphers = on
@@ -422,10 +463,11 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
   - Note that this does not require ssl, it only allows the possibility of ssl. To require ssl you need to comment out all of the other "host" lines, at least the "all" ones (I'm not sure about the replication ones).
     - If you're intending to connect with the modes "disable", "allow", "prefer", or "require" that will work. However, if you're going to use "verify-ca" or "verify-full" you will need to do more work.
 
-    - Testing domain with hosts?
+    - Testing domain with hosts.
       - sudo vim /etc/hosts
         - Add a line similar to
         - 127.0.0.1     your_domain
+          - Comment this line out after testing. I don't think this actually works in a way that will test the certificate.
 
     - WILL NEED TO WRITE A SCRIPT TO DO THIS WHEN UPDATING THE SSL TOO ################
     - You can also comment out the "local" lines as well, but that's up to you. I'd only do this to test out the connection locally.
@@ -471,7 +513,7 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
     - sudo -u postgres psql postgres "sslmode=require host=localhost"
       - sudo -u postgres psql "user=split_user sslmode=require host=localhost dbname=split_tracker"
   - Verify-CA #####
-    - sudo -u postgres psql -U split_user "user=split_user sslmode=verify-full host=yourearat.com port=5432 dbname=split_tracker sslrootcert=chain.pem sslcert=fullchain.pem sslkey=privkey.pem"
+    - sudo -u postgres psql -U split_user "user=split_user sslmode=verify-ca host=yourearat.com port=5432 dbname=split_tracker sslrootcert=chain.pem sslcert=fullchain.pem sslkey=privkey.pem"
   - Verify-Full #######
     - sudo -u postgres psql -U split_user "user=split_user sslmode=verify-full host=yourearat.com port=5432 dbname=split_tracker sslrootcert=chain.pem sslcert=fullchain.pem sslkey=privkey.pem"
 - Create a password for your super user
@@ -782,6 +824,8 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
 - Port Forwarding on the Server
   - PostgreSQL
     - The default port is 5432
+    - sudo ufw allow 5432 comment 'Split_Tracker: PostgreSQL'
+    - sudo ufw allow from 0.0.0.0 to any port 5432 proto tcp comment 'Split_Tracker: PostgreSQL'
     - sudo ufw allow from any to any port 5432 proto tcp comment 'Split_Tracker: PostgreSQL'
       - If we only want to allow the connection from a known address use this
         - sudo ufw allow from ip_address_from to any port 5432 proto tcp comment 'Split_Tracker: PostgreSQL'
@@ -805,6 +849,19 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
   - This will depend on your specific device or server provider. You will have to follow their instructions.
   - You will need to do this if you're using SSL. You could possibly use a self signed certificate instead of Let's Encrypt. However, if you followed these instructions and are using a domain you will need to forward the port publically.
     - You could also probably spoof your domain by modifying the hosts file at "/etc/hosts" by adding a line similiar to "
+- Testing the ports are open with telnet
+  - telnet your_domain_or_ip port
+- Checking ports with netstat
+  - netstat -an | grep LISTEN
+  - netstat -an | grep -i listen
+  - netstat -l
+  - sudo netstat -tunpl
+- Checking iptables
+  - sudo iptables -L -v -n
+- Checking ufw
+  - sudo ufw status
+- Checking ports with lsof
+  - sudo lsof -nP -iTCP -sTCP:LISTEN
 
 ### Possible
 
