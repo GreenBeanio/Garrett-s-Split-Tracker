@@ -447,7 +447,7 @@ The rest of the documentation will be using path examples following the Let's En
   - Change the listening address!
     - By default postgres is listening to the localhost address, something like 127.0.0.1. Even when opening the port in ufw it wont really be open. It will only listen for connections from this machine, not your network! This stumped me for actual days because I thought either my router or isp was messed up, ufe was messed up, my iptables were messed up, or my ssl certificates were messed up. Nope! Just a setting I didn't know I needed to set!
       - Change the value in "listen_address" to the ip or host you want to listen to. I set mine to '0.0.0.0' to listen to every device. You can separate multiple addressed with commas. Note: The address does need to be a string, so put it in quotes.
-        - Not if you want to change the port it listens to that line is right beneath this one. Note: This one is an integer.
+        - Note that if you want to change the port it listens to that line is right beneath this one. Note: This one is an integer.
 - Add rule to allow for ssl
   - sudo vim /etc/postgresql/version#/main/pg_hba.conf
   - Add the following to the end
@@ -622,10 +622,13 @@ The rest of the documentation will be using path examples following the Let's En
           mode: requireTLS
           certificateKeyFile: /projects/ssl/live/youredomain.xxx/mongo.pem
           CAFile: /projects/ssl/live/youredomain.xxx/fullchain.pem
-          allowConnectionsWithoutCertificates: false
+          allowConnectionsWithoutCertificates: true
     </code></pre>
-    - If for some reason you still want to allow connections without ssl you can change the follow line to
-      - allowConnectionsWithoutCertificates: true
+    - If you want the users to have to connect by providing a copy of the certificate change this. Otherwise they will need to connect with a copy of the certificate.
+      - allowConnectionsWithoutCertificates: false
+        - Note that like postgres I believe that this doesn't work well with Let's Encrypt. If you want to go this route I'd suggest using the self-signed certificate method.
+  - Change the bindIp in the net section as well to the domain or ip you're using. By default it will be local, something like 127.0.0.1. The same was PostgreSQL was. I will be changing mine to 0.0.0.0 to listen to all domains. You could also do 0.0.0.0,:: if you care about listening to IPv6 too and not just IPv4.
+    - Note that the port is right above it if you want to change that.
 
 ### Setting up
 
@@ -650,10 +653,19 @@ The rest of the documentation will be using path examples following the Let's En
     - Change "mode: requireTLS" to "mode: preferTLS" or even "mode: allowTLS"
   - sudo systemctl start mongod
 - To use the shell
-  - sudo mongosh
-    - If using ssl it'll be something akin to this
-      - sudo mongosh --host mongo.yourearat.com --tls --tlsCAFile fullchain.pem
-        - ############## TEMP: Check that this is correct later #######################
+  - Local Shell
+    - sudo mongosh
+  - No SSL
+    - sudo mongosh --host yourdomain --port 27017
+      - sudo mongosh --host yourdomain --port 27017 -u youruser -p yourpassword -authenticationDatabase yourdatabase
+  - SSL No Certificates
+    - sudo mongosh --host yourdomain --port 27017 --tls
+      - sudo mongosh --host yourdomain --port 27017 --tls -u youruser -p yourpassword -authenticationDatabase yourdatabase
+  - SSL With Certificates
+    - sudo mongosh --host yourdomain --port 27017 --tls --tlsCAFile fullchain.pem
+      - sudo mongosh --host yourdomain --port 27017 --tls --tlsCAFile fullchain.pem -u youruser -p yourpassword -authenticationDatabase yourdatabase
+    - sudo mongosh --host yourdomain --port 27017 --tls --tlsCAFile fullchain.pem --tlsCertificateKeyFile mongo.pem
+      - sudo mongosh --host yourdomain --port 27017 --tls --tlsCAFile fullchain.pem --tlsCertificateKeyFile mongo.pem -u youruser -p yourpassword -authenticationDatabase yourdatabase
 - Helpful commands
   - Shows mongosh commands
     - help
@@ -665,9 +677,15 @@ The rest of the documentation will be using path examples following the Let's En
   - Show the users
     - use admin
     - db.system.users.find()
-- If you want you can create a root user
+  - Show the databases
+    - show databases
+  - Show all users
+    - db.getSiblingDB('admin').system.users.find()
+- Create a root user
   - use admin
   - db.createUser({user: "root", pwd: "your_password", roles : ["root"]})
+- Create an admin user
+  - db.createUser({user: "admin", pwd: "your_password", roles : [{role: "dbOwner", db: "admin"}]})
 - Creating a database for the application
   - Create the database by switching to it
     - use split_tracker;
@@ -675,12 +693,24 @@ The rest of the documentation will be using path examples following the Let's En
     - db.createCollection("users");
 - Creating the user for the database
   - db.createUser({user: "split_user", pwd: "your_password", roles : [{role: "readWrite", db: "split_tracker"}]});
+- Testing the user
+  - db.auth("split_user", passwordPrompt())
+    - db.auth("split_user", "your password)
+- This is very important! By default you can log into mongoDB without any authnetication. We need to change that.
+  - sudo vim /etc/mongod.conf
+    - Edit, Add, or Modify the following:
+    <pre><code>
+    security:
+      authorization: enabled
+    </code></pre>
 - If we changed this earlier change it back
   - exit
-  - sudo systemctl stop mongod
   - sudo vim /etc/mongod.conf
     - Change it back to "mode: requireTLS"
+- Restart Mongo
+  - sudo systemctl stop mongod
   - sudo systemctl start mongod
+    - sudo systemctl restart mongod
 
 ## Installing Redis
 
@@ -842,18 +872,19 @@ The rest of the documentation will be using path examples following the Let's En
   - PostgreSQL
     - The default port is 5432
     - sudo ufw allow 5432 comment 'Split_Tracker: PostgreSQL'
-    - sudo ufw allow from 0.0.0.0 to any port 5432 proto tcp comment 'Split_Tracker: PostgreSQL'
-    - sudo ufw allow from any to any port 5432 proto tcp comment 'Split_Tracker: PostgreSQL'
-      - If we only want to allow the connection from a known address use this
-        - sudo ufw allow from ip_address_from to any port 5432 proto tcp comment 'Split_Tracker: PostgreSQL'
+      - sudo ufw allow from any to any port 5432 proto tcp comment 'Split_Tracker: PostgreSQL'
+        - If we only want to allow the connection from a known address use this
+          - sudo ufw allow from ip_address_from to any port 5432 proto tcp comment 'Split_Tracker: PostgreSQL'
   - MongoDB
     - The default port is 27017
-    - sudo ufw allow from any to any port 27017 proto tcp comment 'Split_Tracker: MongoDB'
-      - To allow only from a specific IP adjust like the PostgreSQL example
+    - sudo ufw allow 27017 comment 'Split_Tracker: MongoDB'
+      - sudo ufw allow from any to any port 27017 proto tcp comment 'Split_Tracker: MongoDB'
+        - To allow only from a specific IP adjust like the PostgreSQL example
   - Redis
     - The default port is 6379
-    - sudo ufw allow from any to any port 6379 proto tcp comment 'Split_Tracker: Redis'
-      - To allow only from a specific IP adjust like the PostgreSQL example
+    - sudo ufw allow 6379 comment 'Split_Tracker: Redis'
+      - sudo ufw allow from any to any port 6379 proto tcp comment 'Split_Tracker: Redis'
+        - To allow only from a specific IP adjust like the PostgreSQL example
 
 ### Probably need
 
@@ -862,10 +893,13 @@ The rest of the documentation will be using path examples following the Let's En
   - sudo ufw allow from any to any port 5000 proto tcp comment 'Split_Tracker: Flask'
     - To allow only from a specific IP adjust like the PostgreSQL example
 
+- Reload ufw
+  - sudo ufw reload
+
 - Port Forwarding on your router or VPS
   - This will depend on your specific device or server provider. You will have to follow their instructions.
   - You will need to do this if you're using SSL. You could possibly use a self signed certificate instead of Let's Encrypt. However, if you followed these instructions and are using a domain you will need to forward the port publically.
-    - You could also probably spoof your domain by modifying the hosts file at "/etc/hosts" by adding a line similiar to "
+
 - Testing the ports are open with telnet
   - telnet your_domain_or_ip port
 - Checking ports with netstat
