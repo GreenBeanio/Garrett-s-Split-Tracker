@@ -27,7 +27,9 @@ Maybe add notes on setting up the basic linux stuff like disabling passwords and
 - Log into your server with a sudo user
   - ssh desired_name
 - Allowing SSH
-  - sudo ufw allow 22/tcp
+  - sudo apt install openssh-server
+  - sudo systemctl enable ssh
+  - sudo ufw allow ssh
 - Disabling password based login
   - sudo vim /etc/ssh/sshd_config
     - Edit the following lines
@@ -237,9 +239,12 @@ The rest of the documentation will be using path examples following the Let's En
         - sudo openssl genrsa -aes256 -out /projects/ssl/self/yourdomain/ca.key 4096
   - Create the self-signed certificate authority certificate
     - Creating a simple certificate
-      - sudo openssl req -new -x509 -sha256 -nodes -days 365 -key /projects/ssl/self/yourdomain/ca.key -out /projects/ssl/self/yourdomain/ca.crt -subj "/CN=CA" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
+      - sudo openssl req -new -x509 -sha256 -nodes -days 365 -key /projects/ssl/self/yourdomain/ca.key -out /projects/ssl/self/yourdomain/ca.crt -subj "/CN=ca.yourdomain" --addext "subjectAltName=DNS:yourdomain,DNS:www.yourdomain,IP:YourIP"
         - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
           - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
+            - While that is true postgres actually needs it to match your hostname.
+              - The important part of this is that the CN values don't really matter, except for on the certificate that the server is using! The certificate that the server is using is the one that needs to actually match the host that you'll be using to connect to the database. Not the CA but the actual certificate you'll be creating below.
+                - I will be making separate client certificates in this example, but you can use the server ones on the client too.
         - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
         - SSL Information
           - Distinguished Name (DN)
@@ -287,24 +292,16 @@ The rest of the documentation will be using path examples following the Let's En
     - If you want to instead use prompts to answer all of the aspects of the Distinguished name.
       - sudo openssl req -new -x509 -sha256 -key /projects/ssl/self/yourdomain/ca.key -out /projects/ssl/self/yourdomain/ca.crt
     - You can also do these first 2 steps in one action using this commands
-      - sudo openssl req -new -x509 -days 365 -nodes -text -out /projects/ssl/self/yourdomain/ca.crt -keyout /projects/ssl/self/yourdomain/ca.key -subj "/CN=CA" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
-        - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
-          - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
-        - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
+      - sudo openssl req -new -x509 -days 365 -nodes -text -out /projects/ssl/self/yourdomain/ca.crt -keyout /projects/ssl/self/yourdomain/ca.key -subj "/CN=ca.yourdomain" --addext "subjectAltName=DNS:yourdomain,DNS:www.yourdomain,IP:YourIP"
 - Create the Server Certificate and Keys
   - Generating a private key for the server certificate
     - Using RSA again, if you want to use a different type refer to the first step
       - sudo openssl genrsa -out /projects/ssl/self/yourdomain/server.key 2048
   - Generate the server certificate signing request
-    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/self/yourdomain/server.key -out /projects/ssl/self/yourdomain/server.csr -subj "/CN=Server" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
-      - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
-        - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
-        - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
+    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/self/yourdomain/server.key -out /projects/ssl/self/yourdomain/server.csr -subj "/CN=postgre.yourdomain" --addext "subjectAltName=DNS:yourdomain,DNS:www.yourdomain,IP:YourIP"
+      - This is the very important part mentioned when generating the CA!
       - Instead of this you can create the private key and signing request in one step with
-      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/self/yourdomain/server.crt -keyout /projects/ssl/self/yourdomain/server.key -subj "/CN=Server" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
-        - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
-          - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
-        - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
+      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/self/yourdomain/server.crt -keyout /projects/ssl/self/yourdomain/server.key -subj "/CN=postgre.yourdomain" --addext "subjectAltName=DNS:yourdomain,DNS:www.yourdomain,IP:YourIP"
   - Generate the X509 certificate for the server, the certificate chain
     - sudo openssl x509 -req -sha256 -days 365 -CAcreateserial -in /projects/ssl/self/yourdomain/server.csr -CA /projects/ssl/self/yourdomain/ca.crt -CAkey /projects/ssl/self/yourdomain/ca.key -out /projects/ssl/self/yourdomain/server.crt
   - (Optional) If you need to combine the private key and public key together do this to create a pfx file.
@@ -318,15 +315,9 @@ The rest of the documentation will be using path examples following the Let's En
     - Using RSA again, if you want to use a different type refer to the first step
       - sudo openssl genrsa -out /projects/ssl/self/yourdomain/client.key 2048
   - Generate the client certificate signing request
-    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/self/yourdomain/client.key -out /projects/ssl/self/yourdomain/client.csr -subj "/CN=Client" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
-      - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
-        - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
-        - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
+    - sudo openssl req -new -sha256 -nodes -key /projects/ssl/self/yourdomain/client.key -out /projects/ssl/self/yourdomain/client.csr -subj "/CN=client.yourdomain" --addext "subjectAltName=DNS:yourdomain,DNS:www.yourdomain,IP:YourIP"
       - Instead of this you can create the private key and signing request in one step with
-      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/self/yourdomain/client.crt -keyout /projects/ssl/self/yourdomain/client.key -subj "/CN=Client" --addext "subjectAltName=DNS:yourearat.com,DNS:www.yourearat.com,IP:YourIP"
-        - Replace the CN with whatever your host, address, or domain is of the machine it's installed on.
-          - Apparently this is actually wrong! You can name this whatever you want, but the CA, Server, and Client all need to have different values for it.
-        - The subjectAltName is the actual domains and IP addresses you are using. Adjust it to your needs and add as many as you want.
+      - sudo openssl req -newkey rsa:2048 -days 365 -nodes -text -out /projects/ssl/self/yourdomain/client.crt -keyout /projects/ssl/self/yourdomain/client.key -subj "/CN=client.yourdomain" --addext "subjectAltName=DNS:yourdomain,DNS:www.yourdomain,IP:YourIP"
   - Generate the X509 certificate for the client
     - sudo openssl x509 -req -sha256 -days 365 -CAcreateserial -in /projects/ssl/self/yourdomain/client.csr -CA /projects/ssl/self/yourdomain/ca.crt -CAkey /projects/ssl/self/yourdomain/ca.key -out /projects/ssl/self/yourdomain/client.crt
   - (Optional) If you need to combine the private key and public key together do this to create a pfx file.
@@ -351,8 +342,8 @@ The rest of the documentation will be using path examples following the Let's En
       - sudo openssl x509 -inform der -noout -text -in /projects/ssl/self/yourdomain/client.crt
 - Changing ownership and permissions
   - sudo chmod -R u=rwx,g=rx,o= /projects/ssl/self/yourdomain/
-- sudo chown -R root:databases /projects/ssl/self/yourdomain/
-- sudo chmod -R u=rwx,g=r,o= /projects/ssl/self/yourdomain/*
+  - sudo chown -R root:databases /projects/ssl/self/yourdomain/
+  - sudo chmod -R u=rwx,g=r,o= /projects/ssl/self/yourdomain/*
 - Files
   - Certificate Authority
     - ca.crt
@@ -447,13 +438,16 @@ The rest of the documentation will be using path examples following the Let's En
   - Find and modify, or add, the following. You will need to change the path to match the domain name you used. You can find it by running "sudo ls /projects/ssl/live/"
     - <pre><code>
     ssl = on
-    #ssl_ca_file = '/projects/ssl/live/youredomain.xxx/chain.pem'
-    #ssl_cert_file = '/projects/ssl/live/youredomain.xxx/cert.pem'
+    #ssl_ca_file = '/projects/ssl/live/youredomain.xxx/root_ca.pem'
     ssl_cert_file = '/projects/ssl/live/youredomain.xxx/fullchain.pem'
     ssl_key_file = '/projects/ssl/live/youredomain.xxx/privkey.pem'
     ssl_ciphers = 'HIGH:MEDIUM:+3DES:!aNULL'
     ssl_prefer_server_ciphers = on
     </code></pre>
+  - Change the listening address!
+    - By default postgres is listening to the localhost address, something like 127.0.0.1. Even when opening the port in ufw it wont really be open. It will only listen for connections from this machine, not your network! This stumped me for actual days because I thought either my router or isp was messed up, ufe was messed up, my iptables were messed up, or my ssl certificates were messed up. Nope! Just a setting I didn't know I needed to set!
+      - Change the value in "listen_address" to the ip or host you want to listen to. I set mine to '0.0.0.0' to listen to every device. You can separate multiple addressed with commas. Note: The address does need to be a string, so put it in quotes.
+        - Not if you want to change the port it listens to that line is right beneath this one. Note: This one is an integer.
 - Add rule to allow for ssl
   - sudo vim /etc/postgresql/version#/main/pg_hba.conf
   - Add the following to the end
@@ -461,16 +455,29 @@ The rest of the documentation will be using path examples following the Let's En
     hostssl  all         all          0.0.0.0/0      md5
     </code></pre>
   - Note that this does not require ssl, it only allows the possibility of ssl. To require ssl you need to comment out all of the other "host" lines, at least the "all" ones (I'm not sure about the replication ones).
+    - You can also comment out the "local" lines as well, but that's up to you. I probably wouldn't.
     - If you're intending to connect with the modes "disable", "allow", "prefer", or "require" that will work. However, if you're going to use "verify-ca" or "verify-full" you will need to do more work.
+      - If you're using verify-ca you'll need to change the "md5" to "md5 clientcert=verify-ca"
+      - If you're using verify-full you'll need to change the "md5" to "md5 clientcert=verify-full"
+      - Note that these seem to be somewhat finicky (really not working) for me with Let's Encrypt. I believe it's because the CN in Let's Encrypt certificates are not your host name and PostgreSQL wants it to be. So it's probably best to either leave it as md5 or use the self-signed certificates.
+  - (Optional) Testing domain with hosts.
+    - sudo vim /etc/hosts
+      - Add a line similar to
+      - 127.0.0.1     your_domain
+        - Comment this line out after testing. I don't think this actually works in a way that will test the certificate. Probably just skip this step.
+  - If using the "verify-ca" or "verify-full" modes instead of required you will need to add a root certificate authority file.
+    - Let's Encrypt
+      - If you are using Let's Encrypt you need to download the certificate from Let's Encrypt. At the time of documenting this it can be obtained with the following command (however it may change in the future)
+        - sudo curl -o /projects/ssl/live/youredomain.xxx/root_ca.pem "<https://letsencrypt.org/certs/isrgrootx1.pem>"
+        - sudo chown --reference=/projects/ssl/live/youredomain.xxx/cert.pem /projects/ssl/live/youredomain.xxx/root_ca.pem && sudo chmod --reference=/projects/ssl/live/youredomain.xxx/cert.pem /projects/ssl/live/youredomain.xxx/root_ca.pem
+      - Modify the config file
+        - sudo vim /etc/postgresql/version#/main/postgresql.conf
+        - <pre><code>
+        ssl_ca_file = '/projects/ssl/live/youredomain.xxx/root_ca.pem'
+        </code></pre>
+    - Self-Signed Certificates
+      - You should already have the ca file generated. Use that.
 
-    - Testing domain with hosts.
-      - sudo vim /etc/hosts
-        - Add a line similar to
-        - 127.0.0.1     your_domain
-          - Comment this line out after testing. I don't think this actually works in a way that will test the certificate.
-
-    - WILL NEED TO WRITE A SCRIPT TO DO THIS WHEN UPDATING THE SSL TOO ################
-    - You can also comment out the "local" lines as well, but that's up to you. I'd only do this to test out the connection locally.
 - Test that it works
   - sudo systemctl start postgresql
   - sudo systemctl status postgresql
@@ -506,16 +513,26 @@ The rest of the documentation will be using path examples following the Let's En
 ### Setting up PostgreSQL
 
 - Enter the shell as the super user
+  - Change localhost to be your domain.
+  - Chage the ssl parameters to the path to the copies of the certificates on your client.
+  - Local Admin
+    - sudo -u postgres psql
   - No SSL
-    - sudo -u postgres psql postgres
-      - sudo -u postgres psql "user=split_user host=localhost dbname=split_tracker"
+    - sudo -u postgres psql "host=localhost port=5432"
+      - sudo -u postgres psql "user=split_user host=localhost port=5432 dbname=split_tracker"
+      - sudo -u postgres psql "user=split_user password=your_password host=localhost port=5432 dbname=split_tracker"
   - Required
-    - sudo -u postgres psql postgres "sslmode=require host=localhost"
+    - sudo -u postgres psql postgres "sslmode=require host=localhost port=5432"
       - sudo -u postgres psql "user=split_user sslmode=require host=localhost dbname=split_tracker"
-  - Verify-CA #####
-    - sudo -u postgres psql -U split_user "user=split_user sslmode=verify-ca host=yourearat.com port=5432 dbname=split_tracker sslrootcert=chain.pem sslcert=fullchain.pem sslkey=privkey.pem"
-  - Verify-Full #######
-    - sudo -u postgres psql -U split_user "user=split_user sslmode=verify-full host=yourearat.com port=5432 dbname=split_tracker sslrootcert=chain.pem sslcert=fullchain.pem sslkey=privkey.pem"
+      - sudo -u postgres psql "user=split_user password=your_password sslmode=require host=localhost dbname=split_tracker"
+  - Verify-CA
+    - sudo -u postgres psql postgres "sslmode=verify-ca host=localhost port=5432 sslrootcert=root_ca.pem"
+      - sudo -u postgres psql "user=split_user sslmode=verify-ca host=localhost port=5432 dbname=split_tracker sslrootcert=root_ca.pem"
+      - sudo -u postgres psql "user=split_user password=your_password sslmode=verify-ca host=localhost port=5432 dbname=split_tracker sslrootcert=root_ca.pem"
+  - Verify-Full
+    - sudo -u postgres psql postgres "sslmode=verify-full host=localhost port=5432 sslrootcert=root_ca.pem sslcert=fullchain.pem sslkey=privkey.pem"
+      - sudo -u postgres psql "user=split_user sslmode=verify-full host=localhost port=5432 dbname=split_tracker sslrootcert=root_ca.pem sslcert=fullchain.pem sslkey=privkey.pem"
+      - sudo -u postgres psql "user=split_user password=your_password sslmode=verify-full host=localhost port=5432 dbname=split_tracker sslrootcert=root_ca.pem sslcert=fullchain.pem sslkey=privkey.pem"
 - Create a password for your super user
   - \password postgres
 - Create the user for the application
@@ -858,10 +875,13 @@ The rest of the documentation will be using path examples following the Let's En
   - sudo netstat -tunpl
 - Checking iptables
   - sudo iptables -L -v -n
+  - sudo iptables -t nat -L -v -n
 - Checking ufw
   - sudo ufw status
 - Checking ports with lsof
   - sudo lsof -nP -iTCP -sTCP:LISTEN
+- Checking with ss
+  - ss -tuln
 
 ### Possible
 
