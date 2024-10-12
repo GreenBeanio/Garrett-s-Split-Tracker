@@ -84,6 +84,8 @@ Maybe add notes on setting up the basic linux stuff like disabling passwords and
   - sudo mkdir ssl
 - Creating a directory for storing links to config files
   - sudo mkdir configs
+- Creating a directory for storing links to log files
+  - sudo mkdir logs
 
 - Changing the ownership and permissions
   - Change the ownership
@@ -93,6 +95,8 @@ Maybe add notes on setting up the basic linux stuff like disabling passwords and
 
 - Exit the user
   - exit
+
+## Downloading the files for this project
 
 - XXX I will need to add the actual contents of this repo in here too
 
@@ -403,6 +407,16 @@ The rest of the documentation will be using path examples following the Let's En
   - sudo ln -s /etc/postgresql/version#/main/postgresql.conf /projects/configs/postgres/postgresql.conf
   - sudo ln -s /etc/postgresql/version#/main/pg_hba.conf /projects/configs/postgres/pg_hba.conf
 
+### Creating a link to the log file
+
+- Create the directory
+  - sudo mkdir /projects/logs/postgres
+- Edit the ownership and permission
+  - sudo chmod u=rwx,g=rwx,o=rx /projects/logs/postgres
+  - sudo chown split_tracker:databases /projects/logs/postgres
+- Create the soft link
+  - sudo ln -s /var/log/postgresql/postgresql-version#-main.log /projects/logs/postgres/postgresql-version#-main.log
+
 ### Changing the data path
 
 - Start postgresql
@@ -438,6 +452,8 @@ The rest of the documentation will be using path examples following the Let's En
   - Find and modify, or add, the following. You will need to change the path to match the domain name you used. You can find it by running "sudo ls /projects/ssl/live/"
     - <pre><code>
     ssl = on
+    #ssl_ca_file = '/projects/ssl/live/youredomain.xxx/chain.pem'
+    #ssl_cert_file = '/projects/ssl/live/youredomain.xxx/cert.pem'
     #ssl_ca_file = '/projects/ssl/live/youredomain.xxx/root_ca.pem'
     ssl_cert_file = '/projects/ssl/live/youredomain.xxx/fullchain.pem'
     ssl_key_file = '/projects/ssl/live/youredomain.xxx/privkey.pem'
@@ -445,9 +461,11 @@ The rest of the documentation will be using path examples following the Let's En
     ssl_prefer_server_ciphers = on
     </code></pre>
   - Change the listening address!
-    - By default postgres is listening to the localhost address, something like 127.0.0.1. Even when opening the port in ufw it wont really be open. It will only listen for connections from this machine, not your network! This stumped me for actual days because I thought either my router or isp was messed up, ufe was messed up, my iptables were messed up, or my ssl certificates were messed up. Nope! Just a setting I didn't know I needed to set!
+    - By default postgres is listening to the localhost address, something like 127.0.0.1. Even when opening the port in ufw it wont really be open. It will only listen for connections from this machine, not your network! This stumped me for actual days because I thought either my router or isp was messed up, ufw was messed up, my iptables were messed up, or my ssl certificates were messed up. Nope! Just a setting I didn't know I needed to set!
       - Change the value in "listen_address" to the ip or host you want to listen to. I set mine to '0.0.0.0' to listen to every device. You can separate multiple addressed with commas. Note: The address does need to be a string, so put it in quotes.
-        - Note that if you want to change the port it listens to that line is right beneath this one. Note: This one is an integer.
+        - IPv4: Local = 127.0.0.1 | All = 0.0.0.0
+        - IPv6: Local = ::1 | All = ::
+    - Note that if you want to change the port it listens to that line is right beneath this one. Note: This one is an integer.
 - Add rule to allow for ssl
   - sudo vim /etc/postgresql/version#/main/pg_hba.conf
   - Add the following to the end
@@ -483,6 +501,7 @@ The rest of the documentation will be using path examples following the Let's En
   - sudo systemctl status postgresql
     - If it's active then good. If not check the paths you entered.
   - sudo systemctl stop postgresql
+    - sudo systemctl restart postgresql
 
 ### Setting up
 
@@ -595,6 +614,16 @@ The rest of the documentation will be using path examples following the Let's En
 - Create the soft link
   - sudo ln -s /etc/mongod.conf /projects/configs/mongodb/mongod.conf
 
+### Creating a link to the log file
+
+- Create the directory
+  - sudo mkdir /projects/logs/mongodb
+- Edit the ownership and permission
+  - sudo chmod u=rwx,g=rwx,o=rx /projects/logs/mongodb
+  - sudo chown split_tracker:databases /projects/logs/mongodb
+- Create the soft link
+  - sudo ln -s /var/log/mongodb/mongod.log /projects/logs/mongodb/mongod.log
+
 ### Changing the dbPath (because I want to)
 
 - Create the directory
@@ -622,13 +651,15 @@ The rest of the documentation will be using path examples following the Let's En
           mode: requireTLS
           certificateKeyFile: /projects/ssl/live/youredomain.xxx/mongo.pem
           CAFile: /projects/ssl/live/youredomain.xxx/fullchain.pem
+          #CAFile: /projects/ssl/live/youredomain.xxx/root_ca.pem
           allowConnectionsWithoutCertificates: true
     </code></pre>
     - If you want the users to have to connect by providing a copy of the certificate change this. Otherwise they will need to connect with a copy of the certificate.
       - allowConnectionsWithoutCertificates: false
         - Note that like postgres I believe that this doesn't work well with Let's Encrypt. If you want to go this route I'd suggest using the self-signed certificate method.
-  - Change the bindIp in the net section as well to the domain or ip you're using. By default it will be local, something like 127.0.0.1. The same was PostgreSQL was. I will be changing mine to 0.0.0.0 to listen to all domains. You could also do 0.0.0.0,:: if you care about listening to IPv6 too and not just IPv4.
-    - Note that the port is right above it if you want to change that.
+  - Change the listening address
+    - Change the "bindIp" in the net section as well to the domain or ip you're using. By default it will be local, something like 127.0.0.1. The same as PostgreSQL was. I will be changing mine to 0.0.0.0 to listen to all domains. You could also do 0.0.0.0,:: if you care about listening to IPv6 too and not just IPv4.
+      - Note that the port is right above it if you want to change that.
 
 ### Setting up
 
@@ -753,6 +784,13 @@ The rest of the documentation will be using path examples following the Let's En
   - sudo vim /etc/redis/redis.conf
 - Edit the path in the storage section called dbPath
   - dbPath: /projects/redis
+- The following is a very important step! Without it redis will never properly shut down while using systemctl.
+  - sudo vim /lib/systemd/system/redis-server.service
+    - Add the following line to the "[Service]" section. Likely under the other similiar entries
+      - <pre><code>
+      ReadWriteDirectories=-/projects/redis
+      </code></pre>
+  - sudo systemctl daemon-reload
 
 ### Adding SSL
 
@@ -762,15 +800,55 @@ The rest of the documentation will be using path examples following the Let's En
     - <pre><code>
     port 0
     tls-port 6379
-    tls-cert-file /projects/ssl/live/youredomain.xxx/cert.pem
+    #tls-cert-file /projects/ssl/live/youredomain.xxx/cert.pem
+    tls-cert-file /projects/ssl/live/youredomain.xxx/fullchain.pem
     tls-key-file /projects/ssl/live/youredomain.xxx/privkey.pem
     tls-ca-cert-file /projects/ssl/live/youredomain.xxx/chain.pem
+    #tls-ca-cert-file /projects/ssl/live/youredomain.xxx/root_ca.pem
+    tls-auth-clients yes
     </code></pre>
+  - If you want the users to have to connect by providing a copy of the certificate change this. Otherwise they will need to connect with a copy of the certificate.
+    - tls-auth-clients optional
+      - You can also set this to "no" if you don't want to allow client certificates at all
+      - Note that like postgres and mongodb I believe that this doesn't work well with Let's Encrypt. If you want to go this route I'd suggest using the self-signed certificate method.
+  - Change the listening address!
+    - Change the bind IP to the domain or ip you're using. By default it will be local, something like 127.0.0.1 -::1. The same as PostgreSQL and MongoDB were. I will be changing mine to 0.0.0.0 to listen to all domains. You could also do 0.0.0.0 :: if you care about listening to IPv6 too and not just IPv4.
+      - The setting is just called "bind"
 - Test that it works
   - sudo systemctl start redis-server
   - sudo systemctl status redis-server
-    - If it's active then good. If not check the paths you entered.
   - sudo systemctl stop redis-server
+    - Note that if redis has trouble stopping (did you modify the systemd file?) you can always manually kill the process using htop or the kill command after getting the pid with "ps -ax | grep -i redis"
+  - sudo systemctl status redis-server
+    - If it's active then good. If not check the paths you entered.
+      - sudo systemctl restart redis-server
+
+# Setting Up Users
+
+- Redis has 3 options for users
+  - Preferred: ACL
+    - Go into the config file
+      - sudo vim /etc/redis/redis.conf
+    - ACL itself can be set up in 2 ways
+      - Preferred: Using a seperate file
+        - Add or modify the following
+          - "aclfile /etc/redis/users.acl"
+            - You can change the path if you want, but I'll leave mine as the default path.
+          - Create the acl file if it's not already created
+            - sudo touch /etc/redis/users.acl && sudo chown --reference=/etc/redis/ /etc/redis/users.acl && sudo chmod --reference=/etc/redis/ /etc/redis/users.acl
+      - Not Preferred:
+        - Add the ACL commands directly into the config file.
+          - I wont be using this option but just add the lines would be similiar to this:
+            - "user username on >your_password allcommands ~keys_to_match:*"
+  - Not Preferred:
+    - Just the default user with a password.
+      - Go into the config file
+        - sudo vim /etc/redis/redis.conf
+      - Add or modify the following
+        - "requirepass your_password"
+      - This will set a password for the default user. This is from a time when redis didn't have ACL or users and only had one user. You should only use this if you don't care about having multiple users or user permissions.
+  - Don't Do:
+    - Don't use any users. Just an unprotected instance.
 
 ### Creating a link to the config file
 
@@ -780,13 +858,27 @@ The rest of the documentation will be using path examples following the Let's En
   - sudo chmod u=rwx,g=rwx,o=rx /projects/configs/redis
   - sudo chown split_tracker:databases /projects/configs/redis
 - Create the soft link
-  - sudo ln -s /etc/redis/redis.conf /projects/configs/redis/redis.conf
+  - Main config file
+    - sudo ln -s /etc/redis/redis.conf /projects/configs/redis/redis.conf
+  - If you're using the acl file add it too
+    - sudo ln -s /etc/redis/users.acl /projects/configs/redis/users.acl
+      - Note that you can make a symbolic link even if the redis file doesn't exist yet.
+        - You wouldn't be able to make a hard link with "sudo ln /etc/redis/users.acl /projects/configs/redis/users.acl"
+
+### Creating a link to the log file
+
+- Create the directory
+  - sudo mkdir /projects/logs/redis
+- Edit the ownership and permission
+  - sudo chmod u=rwx,g=rwx,o=rx /projects/logs/redis
+  - sudo chown split_tracker:databases /projects/logs/redis
+- Create the soft link
+  - sudo ln -s /var/log/redis/redis-server.log /projects/logs/redis/redis-server.log
 
 ### Setting up
 
 - Add the created user to the group
   - sudo usermod -a -G databases redis
-
 - Start the service
   - sudo systemctl start redis-server
 - Check the status
@@ -794,26 +886,14 @@ The rest of the documentation will be using path examples following the Let's En
 - Enable it on boot
   - sudo systemctl enable redis-server
 
-### Setting up Redis
+# Setting up Redis users with ACL
 
-- Enter redis
+- Enter the local shell
   - sudo redis-cli
-    - With ssl I think it should be something like this
-      - redis-cli --tls --cert cert.pem --key privkey.pem --cacert chain.pem
-        - ######### Need to check this later #################
-          - redis-cli -h hostname -p port --tls --cert cert.pem --key privkey.pem --cacert chain.pem
-    - I couldn't connect because of ssl and not having it set up yet. Instead I did this
-      - sudo systemctl stop redis-server
-        - You may have to manually kill the process if that doesn't work
-          - "sudo htop" is how I prefer to do that
-      - sudo vim /etc/redis/redis.conf
-        - Temporarily comment out the following lines
-        - <pre><code>
-        port 0
-        tls-port 6379
-        </code></pre>
-      - sudo systemctl start redis-server
-      - sudo redis-cli
+    - You may need to try one of these if they aren't working
+      - sudo redis-cli -h 127.0.0.1
+      - sudo redis-cli --tls
+      - sudo redis-cli -h 127.0.0.1 --tls
 - Create an admin user
   - acl setuser admin on >your_password allcommands allkeys
 - You can do these for more information
@@ -823,8 +903,37 @@ The rest of the documentation will be using path examples following the Let's En
     - acl help
   - List of users
     - acl list
+  - Show users
+    - acl users
+  - Get a specific user
+    - acl getuser user_name
+  - Help
+    - help
+    - help command_name
+  - Commands
+    - command List
+  - Show keys
+    - Keys *
+  - Set key
+    - set key value
+    - json.set key $ '{"normal": "json"}'
+  - Get key
+    - get key
+    - json.get key $..path
+  - Delete Key
+    - del key
+    - json.del key $..path
+  - Flush Keys
+    - Flushall
   - select #
     - Selects a specific database instance on redis. by default there are 16 and this can be edited in the config file by changing the "databases" setting.
+  - Index
+    - ft.create index on hash  prefix 1 key:field: schema field-x text sortable
+  - Search
+    - ft.search index search
+    - ft.search index "@field: search"
+  - Aggregate
+    - ft.aggregate index * Groupby 1 @fieldReduce count 0 as output_name
 - Create a user for the application to use
   - Create the user
     - acl setuser split_tracker on >your_password
@@ -837,6 +946,7 @@ The rest of the documentation will be using path examples following the Let's En
       - You can add key patterns with "~keyPattern", with read and write permissions
       - You can do "%R~keyPattern" to add a key pattern with only read permissions
       - You can do "%W~keyPattern" to add a key pattern with only write permissions
+      - You can set if a user is able to be logged into by setting the user to "on" or "off".
 - Create a user for celery to use
   - Create the user
     - acl setuser celery on >your_password
@@ -846,23 +956,42 @@ The rest of the documentation will be using path examples following the Let's En
 - Disable the default user
   - acl setuser default off
     - This should prevent any anonymous connections now
-- Login to redis-cli
+  - acl setuser default >your_password
+    - We need to add a password to the default user or else redis will start in protected mode
+- Saving the users
+  - Redis doesn't seem to persist these by default. Instead you have to follow one of these options.
+  - Preferred: Save the ACL in a seperate file (use this if you set up an ACL file in the config)
+    - ACL SAVE
+      - You can also use "ACL LOAD" to reload an acl file if you made changes to it externally.
+  - Not Preferred: Rewrite the config file (only use this if you forgot to set up the config to use an ACL file)
+    - CONFIG REWRITE
+
+- You could also change the setting "protected-mode" from "yes" to "no", but that seems much less secure.
+
+### Setting up Redis
+
+- Enter redis
+  - Local Shell
+    - sudo redis-cli -n database#
+  - No SSL
+    - sudo redis-cli -n database# -h yourdomain -p 6379
+      - sudo redis-cli -n database# -h yourdomain -p 6379 --user ACL_User --pass ACL_PASS
+        - sudo redis-cli -n database# -h yourdomain -p 6379 --user ACL_User --askpass
+  - SSL No Certificates
+    - sudo redis-cli -n database# -h yourdomain -p 6379 --tls
+      - sudo redis-cli -n database# -h yourdomain -p 6379 --user ACL_User --pass ACL_PASS --tls
+        - sudo redis-cli -n database# -h yourdomain -p 6379 --user ACL_User --askpass --tls
+  - SSL With Certificates
+    - sudo redis-cli -n database# -h yourdomain -p 6379 --tls --cert cert.pem --key privkey.pem --cacert chain.pem
+      - sudo redis-cli -n database# -h yourdomain -p 6379 --user ACL_User --pass ACL_PASS --tls --cert cert.pem --key privkey.pem --cacert chain.pem
+        - sudo redis-cli -n database# -h yourdomain -p 6379 --user ACL_User --askpass --tls --cert cert.pem --key privkey.pem --cacert chain.pem
+- Login to redis-cli (if you didn't pass the information)
   - With auth command
     - redis-cli
-    - auth username password
-  - Directly
-    - redis-cli -u "redis://split_tracker:your_password@host:port"
-      - This might be wonky depending on your password it might mess with bash
-- If you modified the config file before making these modifications
+      - auth username password
+- Shutting down redis
   - shutdown
     - Do this while inside of redis-cli to shut the server off
-  - sudo vim /etc/redis/redis.conf
-    - Uncomment the following lines
-    - <pre><code>
-        port 0
-        tls-port 6379
-        </code></pre>
-    - sudo systemctl start redis-server
 
 ## Port Forwarding
 
