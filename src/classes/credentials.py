@@ -11,6 +11,9 @@
 
 # Imports
 from pymongo import MongoClient
+import psycopg2
+import redis
+import logging
 
 
 # Class to store the config information

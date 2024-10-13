@@ -24,11 +24,269 @@ import datetime
 import psycopg2
 import redis
 import ssl
+import logging
+import sys
+from typing import Union
+
+
+# Function to check if a path exists
+def checkPath(
+    path: pathlib.Path, has_error: bool, variable: str, log: logging.Logger
+) -> bool:
+    # If the path exists return a result based off the existing has_error
+    if pathlib.Path.exists(path):
+        return has_error
+    # If the path doesn't exist return an error
+    else:
+        log.warning(f'Invalid path for "{variable}"')
+        return True
+
+
+# Function to create Mongo Connection
+def connectMongo(
+    connection_type: str,
+    authSource: str,
+    username: str,
+    password: str,
+    host: str,
+    port: int,
+    tlsCAFile: Union[pathlib.Path, None],
+    tlsCertificateKeyFile: Union[pathlib.Path, None],
+) -> MongoClient:
+    # If there's no SSL
+    if connection_type == "NO":
+        mongo_client = MongoClient(
+            authSource=authSource,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+        )
+    # If there's SSL
+    elif connection_type == "PLAIN":
+        mongo_client = MongoClient(
+            authSource=authSource,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+            tsl=True,
+        )
+    # If there's SSL with Certificates
+    elif connection_type == "CERTIFICATE":
+        mongo_client = MongoClient(
+            authSource=authSource,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+            tsl=True,
+            tlsCAFile=tlsCAFile,
+            tlsCertificateKeyFile=tlsCertificateKeyFile,
+        )
+    # print(f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource={json_obj["MONGO_DATABASE"]}&tls=true&tlsCAFILE={json_obj["MONGO_SSL_FILE"]}')
+    # print(f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource={json_obj["MONGO_DATABASE"]}')
+    # print(mongo_client)
+    # print(mongo_client.server_info())
+    # Return the resulting connection
+    return mongo_client
+
+
+# Function to create Postgre Connection
+def connectPostgre(
+    connection_type: str,
+    database: str,
+    user: str,
+    password: str,
+    host: str,
+    port: int,
+    sslrootcert: Union[pathlib.Path, None],
+    sslcert: Union[pathlib.Path, None],
+    sslkey: Union[pathlib.Path, None],
+) -> psycopg2:  # Not sure on the type
+    # If there's no SSL
+    if connection_type == "NO":
+        postgre_client = psycopg2.connect(
+            database=database,
+            user=user,
+            password=password,
+            host=host,
+            port=port,
+        )
+    # If there's SSL
+    elif connection_type == "PLAIN":
+        postgre_client = psycopg2.connect(
+            database=database,
+            user=user,
+            password=password,
+            host=host,
+            port=port,
+            sslmode="require",
+        )
+    # If there's SSL verifying CA
+    elif connection_type == "CA_CERTIFICATE":
+        postgre_client = psycopg2.connect(
+            database=database,
+            user=user,
+            password=password,
+            host=host,
+            port=port,
+            sslmode="verify-ca",
+            sslrootcert=sslrootcert,
+        )
+    # If there's SSL verifying full
+    elif connection_type == "FULL_CERTIFICATE":
+        postgre_client = psycopg2.connect(
+            database=database,
+            user=user,
+            password=password,
+            host=host,
+            port=port,
+            sslmode="verify-full",
+            sslrootcert=sslrootcert,
+            sslcert=sslcert,
+            sslkey=sslkey,
+        )
+    # Return the resulting connection
+    return postgre_client
+
+
+# Function to create Redis Connection
+def connectRedis(
+    connection_type: str,
+    db: int,
+    username: str,
+    password: str,
+    host: str,
+    port: int,
+    ssl_ca_certs: Union[pathlib.Path, None],
+    ssl_certfile: Union[pathlib.Path, None],
+    ssl_keyfile: Union[pathlib.Path, None],
+) -> redis.Redis:  # Not sure on the type
+    # If there's no SSL
+    if connection_type == "NO":
+        redis_client = redis.Redis(
+            db=db,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+        )
+    # If there's SSL
+    elif connection_type == "PLAIN":
+        redis_client = redis.Redis(
+            db=db,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+            ssl=True,
+            # ssl_cert_reqs=???
+        )
+    # If there's SSL with Certificates
+    elif connection_type == "CERTIFICATE":
+        redis_client = redis.Redis(
+            db=db,
+            username=username,
+            password=password,
+            host=host,
+            port=port,
+            ssl=True,
+            # ssl_cert_reqs=???
+            ssl_ca_certs=ssl_ca_certs,
+            ssl_certfile=ssl_certfile,
+            ssl_keyfile=ssl_keyfile,
+        )
+    # Return the resulting connection
+    return redis_client
+
+
+# Function to create Celery Connection
+def connectCelery(
+    connection_type: str,
+    db: int,
+    username: str,
+    password: str,
+    host: str,
+    port: int,
+    ssl_ca_certs: Union[pathlib.Path, None],
+    ssl_certfile: Union[pathlib.Path, None],
+    ssl_keyfile: Union[pathlib.Path, None],
+) -> dict:
+    # If there's no SSL
+    if connection_type == "NO":
+        # Create the celery dict
+        redis_uri = f"redis://{username}:{password}@{host}:{port}/{db}"
+        celery_dict = dict(
+            broker_url=redis_uri,
+            result_backend=redis_uri,
+            task_ignore_result=True,
+            # Beat schedule for timing repetitive events (You can set up the schedules in here like this too instead of with the functions)
+            # "task-name" : {"task": "function", "schedule": time_in_seconds}
+            # beat_schedule={
+            #     "task-every-minute": {
+            #         "task": "auth.functions.auth_functions.removeExpiredSessions",
+            #         "schedule": datetime.timedelta(seconds=1),
+            #     }
+            # },
+        )
+    # If there's SSL
+    elif connection_type == "PLAIN":
+        # Create the celery dict
+        redis_uri = f"redis://{username}:{password}@{host}:{port}/{db}"
+        celery_dict = dict(
+            broker_url=redis_uri,
+            result_backend=redis_uri,
+            task_ignore_result=True,
+            # Beat schedule for timing repetitive events (You can set up the schedules in here like this too instead of with the functions)
+            # "task-name" : {"task": "function", "schedule": time_in_seconds}
+            # beat_schedule={
+            #     "task-every-minute": {
+            #         "task": "auth.functions.auth_functions.removeExpiredSessions",
+            #         "schedule": datetime.timedelta(seconds=1),
+            #     }
+            # },
+            broker_use_ssl={
+                "keyfile": ssl_keyfile,
+                "certfile": ssl_certfile,
+                "ca_certs": ssl_ca_certs,
+                "cert_reqs": ssl.CERT_NONE,  # Maybe set this to "ssl.CERT_OPTIONAL" instead
+            },
+        )
+    # If there's SSL with Certificates
+    elif connection_type == "CERTIFICATE":
+        # Create the celery dict
+        redis_uri = f"redis://{username}:{password}@{host}:{port}/{db}"
+        celery_dict = dict(
+            broker_url=redis_uri,
+            result_backend=redis_uri,
+            task_ignore_result=True,
+            # Beat schedule for timing repetitive events (You can set up the schedules in here like this too instead of with the functions)
+            # "task-name" : {"task": "function", "schedule": time_in_seconds}
+            # beat_schedule={
+            #     "task-every-minute": {
+            #         "task": "auth.functions.auth_functions.removeExpiredSessions",
+            #         "schedule": datetime.timedelta(seconds=1),
+            #     }
+            # },
+            broker_use_ssl={
+                "keyfile": ssl_keyfile,
+                "certfile": ssl_certfile,
+                "ca_certs": ssl_ca_certs,
+                "cert_reqs": ssl.CERT_REQUIRED,
+            },
+        )
+    # Return the resulting dictionary
+    return celery_dict
 
 
 # Function to load our credentials
 def loadCredentials(running_path: pathlib.Path) -> Config:
-    # print("uh oh tried again!!!!!!")
+    # Create a logger
+    logger = logging.getLogger("Split_Tracker")
+    logger.setLevel(logging.INFO)
+    # Variable for storing if there's an error
+    has_error = False
     # Create the path to the settings (where the main script is running then getting the directory)
     script_path = pathlib.Path(running_path).resolve().parent.resolve()
     json_path = pathlib.Path.joinpath(script_path, "config.json")
@@ -38,7 +296,141 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             # Load the json
             json_obj = json.load(file)
 
-        # Need to check these paths with pathlib first for the ssl
+        # Check for valid SSL types
+        check_ssl_path = False
+        if json_obj["MONGO_SSL"] in ["NO", "PLAIN", "CERTIFICATE"]:
+            if json_obj["MONGO_SSL"] == "CERTIFICATE":
+                check_ssl_path = True
+        else:
+            logger.warning(
+                f'Invalid option for "MONGO_SSL"! It must be "NO", "PLAIN", or "CERTIFICATE"'
+            )
+            has_error = True
+        if json_obj["POSTGRE_SSL"] in [
+            "NO",
+            "PLAIN",
+            "CA_CERTIFICATE",
+            "FULL_CERTIFICATE",
+        ]:
+            if json_obj["POSTGRE_SSL"] in ["CA_CERTIFICATE", "FULL_CERTIFICATE"]:
+                check_ssl_path = True
+        else:
+            logger.warning(
+                f'Invalid option for "POSTGRE_SSL"! It must be "NO", "PLAIN", "CA_CERTIFICATE", or "FULL_CERTIFICATE"'
+            )
+            has_error = True
+        if json_obj["REDIS_SSL"] in ["NO", "PLAIN", "CERTIFICATE"]:
+            if json_obj["REDIS_SSL"] == "CERTIFICATE":
+                check_ssl_path = True
+        else:
+            logger.warning(
+                f'Invalid option for "REDIS_SSL"! It must be "NO", "PLAIN", or "CERTIFICATE"'
+            )
+            has_error = True
+        # Checking the SSL path
+        if check_ssl_path:
+            if json_obj["SSL_PATH_TYPE"] not in ["RELATIVE", "ABSOLUTE"]:
+                logger.warning(
+                    f'Invalid option for "SSL_PATH_TYPE"! It must be "RELATIVE" or "ABSOLUTE"'
+                )
+                has_error = True
+        # Closing if there's an error in the configuration
+        if has_error:
+            sys.exit()
+        # Reset the error variable
+        has_error = False
+
+        # If any of out connections are using ssl and a certificate we'll check the paths
+        if check_ssl_path:
+            # Check for Mongo
+            if json_obj["MONGO_SSL"] == "CERTIFICATE":
+                # If we're using relative paths
+                if json_obj["SSL_PATH_TYPE"] == "RELATIVE":
+                    mongo_ca_path = pathlib.Path.joinpath(
+                        script_path, json_obj["MONGO_CA_FILE"]
+                    )
+                    has_error = checkPath(mongo_ca_path, has_error, "MONGO_CA_FILE")
+                    mongo_ssl_path = pathlib.Path.joinpath(
+                        script_path, json_obj["MONGO_SSL_FILE"]
+                    )
+                    has_error = checkPath(mongo_ssl_path, has_error, "MONGO_SSL_FILE")
+                # If we're using absolute paths
+                else:
+                    mongo_ca_path = pathlib.Path(json_obj["MONGO_CA_FILE"])
+                    has_error = checkPath(mongo_ca_path, has_error, "MONGO_CA_FILE")
+                    mongo_ssl_path = pathlib.Path(json_obj["MONGO_SSL_FILE"])
+                    has_error = checkPath(mongo_ssl_path, has_error, "MONGO_SSL_FILE")
+            # Check for Postgre
+            if json_obj["POSTGRE_SSL"] in ["CA_CERTIFICATE", "FULL_CERTIFICATE"]:
+                # If we're using relative paths
+                if json_obj["SSL_PATH_TYPE"] == "RELATIVE":
+                    postgre_ca_path = pathlib.Path.joinpath(
+                        script_path, json_obj["POSTGRE_CA_FILE"]
+                    )
+                    has_error = checkPath(postgre_ca_path, has_error, "POSTGRE_CA_FILE")
+                    # If postgres is doing full verificaiton
+                    if json_obj["POSTGRE_SSL"] == "FULL_CERTIFICATE":
+                        postgre_key_path = pathlib.Path.joinpath(
+                            script_path, json_obj["POSTGRE_KEY_FILE"]
+                        )
+                        has_error = checkPath(
+                            postgre_key_path, has_error, "POSTGRE_KEY_FILE"
+                        )
+                        postgre_cert_path = pathlib.Path.joinpath(
+                            script_path, json_obj["POSTGRE_CERT_FILE"]
+                        )
+                        has_error = checkPath(
+                            postgre_cert_path, has_error, "POSTGRE_CERT_FILE"
+                        )
+                # If we're using absolute paths
+                else:
+                    postgre_ca_path = pathlib.Path(json_obj["POSTGRE_CA_FILE"])
+                    has_error = checkPath(postgre_ca_path, has_error, "POSTGRE_CA_FILE")
+                    # If postgres is doing full verificaiton
+                    if json_obj["POSTGRE_SSL"] == "FULL_CERTIFICATE":
+                        postgre_key_path = pathlib.Path(json_obj["POSTGRE_KEY_FILE"])
+                        has_error = checkPath(
+                            postgre_key_path, has_error, "POSTGRE_KEY_FILE"
+                        )
+                        postgre_cert_path = pathlib.Path(json_obj["POSTGRE_CERT_FILE"])
+                        has_error = checkPath(
+                            postgre_cert_path, has_error, "POSTGRE_CERT_FILE"
+                        )
+            # Check for Redis
+            if json_obj["REDIS_SSL"] == "CERTIFICATE":
+                # If we're using relative paths
+                if json_obj["SSL_PATH_TYPE"] == "RELATIVE":
+                    redis_ca_path = pathlib.Path.joinpath(
+                        script_path, json_obj["REDIS_CA_FILE"]
+                    )
+                    has_error = checkPath(redis_ca_path, has_error, "REDIS_CA_FILE")
+                    redis_key_path = pathlib.Path.joinpath(
+                        script_path, json_obj["REDIS_KEY_FILE"]
+                    )
+                    has_error = checkPath(redis_key_path, has_error, "REDIS_KEY_FILE")
+                    redis_cert_path = pathlib.Path.joinpath(
+                        script_path, json_obj["REDIS_CERT_FILE"]
+                    )
+                    has_error = checkPath(redis_cert_path, has_error, "REDIS_CERT_FILE")
+                # If we're using absolute paths
+                else:
+                    redis_ca_path = pathlib.Path(json_obj["REDIS_CA_FILE"])
+                    has_error = checkPath(redis_ca_path, has_error, "REDIS_CA_FILE")
+                    redis_key_path = pathlib.Path(json_obj["REDIS_KEY_FILE"])
+                    has_error = checkPath(redis_key_path, has_error, "REDIS_KEY_FILE")
+                    redis_cert_path = pathlib.Path(json_obj["REDIS_CERT_FILE"])
+                    has_error = checkPath(redis_cert_path, has_error, "REDIS_CERT_FILE")
+        # Closing if there's an error in the configuration
+        if has_error:
+            sys.exit()
+        # Reset the error variable
+        has_error = False
+
+        ### STOPPED HERE ###
+        # Need to replace the below to use the functions and do exception handling to quit if one of them doesn't connect
+        # Also need to see if I can test the celery connection since I didn't do that in here before.
+        # Also should probably make a shell script to start the flask program, celery worker, and celery beat with one command
+        ### STOPPED HERE ###
 
         # Connect to MongoDB
         if json_obj["MONGO_SSL"]:
@@ -189,38 +581,53 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
     # Create a file if it doesn't exist
     else:
         default_json = {
-            # General
+            # Flask
             "SECRET_KEY": "YOUR_SECRET_KEY",
             "TESTING": "TRUE_OR_FALSE",
             "DEBUG": "TRUE_OR_FALSE",
-            "FLASK_HOST": "YOUR_FLASK_HOST (Default 0.0.0.0)",
+            "FLASK_HOST": "YOUR_FLASK_HOST (local machine only 127.0.0.1 or 0.0.0.0 for other machines)",
             "FLASK_PORT": "YOUR_FLASK_PORT (Default 5000)",
+            # General
+            "SSL_PATH_TYPE": "RELATIVE_ABSOLUTE",
             # Mongodb
-            "MONGO_ADDRESS": "ADDRESS_TO_MONGO",
-            "MONGO_PORT": "MONGO_PORT",
+            "MONGO_ADDRESS": "ADDRESS_TO_MONGO (local machine 127.0.0.1 or another host)",
+            "MONGO_PORT": "MONGO_PORT (Default 27017)",
             "MONGO_USER": "YOUR_MONGO_USER",
             "MONGO_PASS": "YOUR_MONGO_PASSWORD",
             "MONGO_DATABASE": "MONGO_DATABASE_NAME",
-            "MONGO_SSL": False,
+            "MONGO_SSL": "NO, PLAIN, CERTIFICATE",  ###
+            "MONGO_CA_FILE": "PATH_TO_CA_FILE",  ####
             "MONGO_SSL_FILE": "PATH_TO_SSL_FILE",
             # PostgreSQL
-            "POSTGRE_ADDRESS": "ADDRESS_TO_POSTGRE",
-            "POSTGRE_PORT": "POSTGRE_PORT",
+            "POSTGRE_ADDRESS": "ADDRESS_TO_POSTGRE (local machine 127.0.0.1 or another host)",
+            "POSTGRE_PORT": "POSTGRE_PORT (Default 5432)",
             "POSTGRE_USER": "YOUR_POSTGRE_USER",
             "POSTGRE_PASS": "YOUR_POSTGRE_PASSWORD",
             "POSTGRE_DATABASE": "POSTGRE_DATABASE_NAME",
-            "POSTGRE_SSL": False,
+            "POSTGRE_SSL": "NO, PLAIN, CA_CERTIFICATE, FULL_CERTIFICATE",  ###
+            "POSTGRE_CA_FILE": "PATH_TO_SSL_CA",
             "POSTGRE_KEY_FILE": "PATH_TO_SSL_KEY",
             "POSTGRE_CERT_FILE": "PATH_TO_SSL_CERT",
-            "POSTGRE_CA_FILE": "PATH_TO_SSL_CA",
             # Redis
-            "REDIS_ADDRESS": "ADDRESS_TO_REDIS",
-            "REDIS_PORT": "REDIS_PORT",
-            "REDIS_PASS": "YOUR_REDIS_PASSWORD",
-            "REDIS_SSL": False,
+            "REDIS_ADDRESS": "ADDRESS_TO_REDIS (local machine 127.0.0.1 or another host)",
+            "REDIS_PORT": "REDIS_PORT (Default 6379)",
+            "REDIS_USER": "YOUR_REDIS_USER",
+            "REDIS_PASS": "YOUR_REDIS_PASSWORD",  ###
+            "REDIS_DATABASE": "REDIS_DATABASE_NUMBER",  ###
+            "REDIS_SSL": "NO, PLAIN, CERTIFICATE",  ###
+            "REDIS_CA_FILE": "PATH_TO_SSL_CA",
             "REDIS_KEY_FILE": "PATH_TO_SSL_KEY",
             "REDIS_CERT_FILE": "PATH_TO_SSL_CERT",
-            "REDIS_CA_FILE": "PATH_TO_SSL_CA",
+            # Celery Redis
+            "CELERY_REDIS_ADDRESS": "ADDRESS_TO_CELERY_REDIS (local machine 127.0.0.1 or another host)",
+            "CELERY_REDIS_PORT": "CELERY_REDIS_PORT (Default 6379)",
+            "CELERY_REDIS_USER": "YOUR_CELERY_REDIS_USER",
+            "CELERY_REDIS_PASS": "YOUR_CELERY_REDIS_PASSWORD",  ###
+            "CELERY_REDIS_DATABASE": "CELERY_REDIS_DATABASE_NUMBER",  ###
+            "CELERY_REDIS_SSL": "NO, PLAIN, CERTIFICATE",  ###
+            "CELERY_REDIS_CA_FILE": "PATH_TO_SSL_CA",
+            "CELERY_REDIS_KEY_FILE": "PATH_TO_SSL_KEY",
+            "CELERY_REDIS_CERT_FILE": "PATH_TO_SSL_CERT",
         }
         with open(json_path, "w+") as file:
             json_obj = json.dumps(default_json, indent=4, sort_keys=False, default=str)
