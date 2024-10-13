@@ -661,6 +661,19 @@ The rest of the documentation will be using path examples following the Let's En
     - Change the "bindIp" in the net section as well to the domain or ip you're using. By default it will be local, something like 127.0.0.1. The same as PostgreSQL was. I will be changing mine to 0.0.0.0 to listen to all domains. You could also do 0.0.0.0,:: if you care about listening to IPv6 too and not just IPv4.
       - Note that the port is right above it if you want to change that.
 
+### Optional: Setting kernel settings recommended for MongoDB
+
+- MongoDB recommends that these settings are set.
+- sudo vim /etc/sysctl.conf
+  - Add this line in the file
+    - <pre><code>
+        vm.max_map_count = 131060
+        fs.file-max = 98000
+        kernel.pid_max = 64000
+        kernel.threads-max = 64000
+      </code></pre>
+- sudo sysctl -p
+
 ### Setting up
 
 - Add the created user to the group
@@ -823,7 +836,7 @@ The rest of the documentation will be using path examples following the Let's En
     - If it's active then good. If not check the paths you entered.
       - sudo systemctl restart redis-server
 
-# Setting Up Users
+### Setting Up Users
 
 - Redis has 3 options for users
   - Preferred: ACL
@@ -849,6 +862,16 @@ The rest of the documentation will be using path examples following the Let's En
       - This will set a password for the default user. This is from a time when redis didn't have ACL or users and only had one user. You should only use this if you don't care about having multiple users or user permissions.
   - Don't Do:
     - Don't use any users. Just an unprotected instance.
+
+### Optional: Enable vm.overcommit_memory
+
+- Redis may alert you that you need to add vm.overcommit_memory.
+- sudo vim /etc/sysctl.conf
+  - Add this line in the file
+    - <pre><code>
+        vm.overcommit_memory = 1
+      </code></pre>
+- sudo sysctl -p
 
 ### Creating a link to the config file
 
@@ -925,6 +948,8 @@ The rest of the documentation will be using path examples following the Let's En
     - json.del key $..path
   - Flush Keys
     - Flushall
+  - Expiring Keys
+    - Expire key seconds NX
   - select #
     - Selects a specific database instance on redis. by default there are 16 and this can be edited in the config file by changing the "databases" setting.
   - Index
