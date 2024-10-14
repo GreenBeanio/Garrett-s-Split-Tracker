@@ -70,7 +70,7 @@ def connectMongo(
             password=password,
             host=host,
             port=port,
-            tsl=True,
+            tls=True,
         )
     # If there's SSL with Certificates
     elif connection_type == "CERTIFICATE":
@@ -80,7 +80,7 @@ def connectMongo(
             password=password,
             host=host,
             port=port,
-            tsl=True,
+            tls=True,
             tlsCAFile=tlsCAFile,
             tlsCertificateKeyFile=tlsCertificateKeyFile,
         )
@@ -298,6 +298,12 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
 
         # Check for valid SSL types
         check_ssl_path = False
+        if json_obj["FLASK_SSL"] in [True, False]:
+            if json_obj["MONGO_SSL"] == True:
+                check_ssl_path = True
+        else:
+            logger.warning(f'Invalid option for "FLASK_SSL"! It must be true or false')
+            has_error = True
         if json_obj["MONGO_SSL"] in ["NO", "PLAIN", "CERTIFICATE"]:
             if json_obj["MONGO_SSL"] == "CERTIFICATE":
                 check_ssl_path = True
@@ -327,7 +333,7 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                 f'Invalid option for "REDIS_SSL"! It must be "NO", "PLAIN", or "CERTIFICATE"'
             )
             has_error = True
-        # Checking the SSL path
+        # Checking the SSL path type
         if check_ssl_path:
             if json_obj["SSL_PATH_TYPE"] not in ["RELATIVE", "ABSOLUTE"]:
                 logger.warning(
@@ -340,8 +346,26 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
         # Reset the error variable
         has_error = False
 
-        # If any of out connections are using ssl and a certificate we'll check the paths
+        # If any of the connections are using ssl and a certificate we'll check the paths
         if check_ssl_path:
+            # Check for Flask
+            if json_obj["FLASK_SSL"] == True:
+                # If we're using relative paths
+                if json_obj["SSL_PATH_TYPE"] == "RELATIVE":
+                    flask_key_path = pathlib.Path.joinpath(
+                        script_path, json_obj["FLASK_KEY_FILE"]
+                    )
+                    has_error = checkPath(flask_key_path, has_error, "FLASK_KEY_FILE")
+                    flask_cert_path = pathlib.Path.joinpath(
+                        script_path, json_obj["FLASK_CERT_FILE"]
+                    )
+                    has_error = checkPath(flask_cert_path, has_error, "FLASK_CERT_FILE")
+                # If we're using absolute paths
+                else:
+                    flask_key_path = pathlib.Path(json_obj["FLASK_KEY_FILE"])
+                    has_error = checkPath(flask_key_path, has_error, "FLASK_KEY_FILE")
+                    flask_cert_path = pathlib.Path(json_obj["FLASK_CERT_FILE"])
+                    has_error = checkPath(flask_cert_path, has_error, "FLASK_CERT_FILE")
             # Check for Mongo
             if json_obj["MONGO_SSL"] == "CERTIFICATE":
                 # If we're using relative paths
@@ -368,7 +392,7 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                         script_path, json_obj["POSTGRE_CA_FILE"]
                     )
                     has_error = checkPath(postgre_ca_path, has_error, "POSTGRE_CA_FILE")
-                    # If postgres is doing full verificaiton
+                    # If postgres is doing full verification
                     if json_obj["POSTGRE_SSL"] == "FULL_CERTIFICATE":
                         postgre_key_path = pathlib.Path.joinpath(
                             script_path, json_obj["POSTGRE_KEY_FILE"]
@@ -386,7 +410,7 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                 else:
                     postgre_ca_path = pathlib.Path(json_obj["POSTGRE_CA_FILE"])
                     has_error = checkPath(postgre_ca_path, has_error, "POSTGRE_CA_FILE")
-                    # If postgres is doing full verificaiton
+                    # If postgres is doing full verification
                     if json_obj["POSTGRE_SSL"] == "FULL_CERTIFICATE":
                         postgre_key_path = pathlib.Path(json_obj["POSTGRE_KEY_FILE"])
                         has_error = checkPath(
@@ -426,177 +450,164 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
         # Reset the error variable
         has_error = False
 
-        ### STOPPED HERE ###
-        # Need to replace the below to use the functions and do exception handling to quit if one of them doesn't connect
-        # Also need to see if I can test the celery connection since I didn't do that in here before.
-        # Also should probably make a shell script to start the flask program, celery worker, and celery beat with one command
-        ### STOPPED HERE ###
-
-        # Connect to MongoDB
-        if json_obj["MONGO_SSL"]:
-            # print(f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource={json_obj["MONGO_DATABASE"]}&tls=true&tlsCAFILE={json_obj["MONGO_SSL_FILE"]}')
-            mongo_client = MongoClient(
+        # Attempting to create the database connections
+        try:
+            mongo_connection = connectMongo(
+                connection_type=json_obj["MONGO_SSL"],
                 authSource=json_obj["MONGO_DATABASE"],
                 username=json_obj["MONGO_USER"],
                 password=json_obj["MONGO_PASS"],
                 host=json_obj["MONGO_ADDRESS"],
                 port=json_obj["MONGO_PORT"],
-                # authMechanism="SCRAM-SHA-256",
-                tsl=True,
-                tlsCAFile=json_obj["MONGO_SSL_FILE"],
-                # tlsCertificateKeyFile=json_obj["MONGO_SSL_FILE"] # Might need to try this one instead if that one doesn't work
+                tlsCAFile=json_obj["MONGO_CA_FILE"],
+                tlsCertificateKeyFile=json_obj["MONGO_SSL_FILE"],
             )
-        else:
-            # print(f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource={json_obj["MONGO_DATABASE"]}')
-            # Create a mongoDB connection
-            mongo_client = MongoClient(
-                f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource={json_obj["MONGO_DATABASE"]}'
+        except:
+            logger.warning(
+                "Invalid options for the MongoDB connection! Can't form a connection!"
             )
-            # print(mongo_client)
-            # print(mongo_client.server_info())
-
-        # Connect to PostgreSQL
-        if json_obj["POSTGRE_SSL"]:
-            ## Create the postgres client
-            postgre_client = psycopg2.connect(
+            has_error = True
+        try:
+            postgre_connection = connectPostgre(
+                connection_type=json_obj["POSTGRE_SSL"],
                 database=json_obj["POSTGRE_DATABASE"],
                 user=json_obj["POSTGRE_USER"],
                 password=json_obj["POSTGRE_PASS"],
                 host=json_obj["POSTGRE_ADDRESS"],
                 port=json_obj["POSTGRE_PORT"],
-                sslmode="verify-full",  # "require" or "verify-ca"
-                # For verify-ca and verify-full
                 sslrootcert=json_obj["POSTGRE_CA_FILE"],
-                # For verify-full
                 sslcert=json_obj["POSTGRE_CERT_FILE"],
                 sslkey=json_obj["POSTGRE_KEY_FILE"],
             )
-        else:
-            ## Create the postgres client
-            postgre_client = psycopg2.connect(
-                database=json_obj["POSTGRE_DATABASE"],
-                user=json_obj["POSTGRE_USER"],
-                password=json_obj["POSTGRE_PASS"],
-                host=json_obj["POSTGRE_ADDRESS"],
-                port=json_obj["POSTGRE_PORT"],
+        except:
+            logger.warning(
+                "Invalid options for the PostgreSQL connection! Can't form a connection!"
             )
-
-        # Connect to Redis
-        if json_obj["REDIS_SSL"]:
-            # Create the celery dict
-            celery_dict = dict(
-                broker_url=f'redis://ANY_USERNAME:{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
-                result_backend=f'redis://ANY_USERNAME:{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
-                task_ignore_result=True,
-                # Beat schedule for timing repetitive events (You can set up the schedules in here like this too instead of with the functions)
-                # "task-name" : {"task": "function", "schedule": time_in_seconds}
-                # beat_schedule={
-                #     "task-every-minute": {
-                #         "task": "auth.functions.auth_functions.removeExpiredSessions",
-                #         "schedule": datetime.timedelta(seconds=1),
-                #     }
-                # },
-                broker_use_ssl={
-                    "keyfile": json_obj["REDIS_KEY_FILE"],
-                    "certfile": json_obj["REDIS_CERT_FILE"],
-                    "ca_certs": json_obj["REDIS_CA_FILE"],
-                    "cert_reqs": ssl.CERT_REQUIRED,
-                },
-            )
-            # Creating redis connection
-            redis_client = redis.Redis(
+            has_error = True
+        try:
+            redis_connection = connectRedis(
+                connection_type=json_obj["REDIS_SSL"],
+                db=json_obj["REDIS_DATABASE"],
+                username=json_obj["REDIS_USER"],
+                password=json_obj["REDIS_PASS"],
                 host=json_obj["REDIS_ADDRESS"],
                 port=json_obj["REDIS_PORT"],
-                password=json_obj["REDIS_PASS"],
-                ssl=True,
+                ssl_ca_certs=json_obj["REDIS_CA_FILE"],
                 ssl_certfile=json_obj["REDIS_CERT_FILE"],
                 ssl_keyfile=json_obj["REDIS_KEY_FILE"],
-                ssl_ca_certs=json_obj["REDIS_CA_FILE"],
             )
-        else:
-            # Create the celery dict
-            celery_dict = dict(
-                broker_url=f'redis://ANY_USERNAME:{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
-                result_backend=f'redis://ANY_USERNAME:{json_obj["REDIS_PASS"]}@{json_obj["REDIS_ADDRESS"]}:{json_obj["REDIS_PORT"]}',
-                task_ignore_result=True,
-                # Beat schedule for timing repetitive events (You can set up the schedules in here like this too instead of with the functions)
-                # "task-name" : {"task": "function", "schedule": time_in_seconds}
-                # beat_schedule={
-                #     "task-every-minute": {
-                #         "task": "auth.functions.auth_functions.removeExpiredSessions",
-                #         "schedule": datetime.timedelta(seconds=1),
-                #     }
-                # },
+        except:
+            logger.warning(
+                "Invalid options for the Redis connection! Can't form a connection!"
             )
-            # Creating redis connection
-            redis_client = redis.Redis(
-                host=json_obj["REDIS_ADDRESS"],
-                port=json_obj["REDIS_PORT"],
-                password=json_obj["REDIS_PASS"],
+            has_error = True
+        try:
+            # Need to test this as a connection too
+            celery_dict = connectCelery(
+                connection_type=json_obj["CELERY_REDIS_SSL"],
+                db=json_obj["CELERY_REDIS_DATABASE"],
+                username=json_obj["CELERY_REDIS_USER"],
+                password=json_obj["CELERY_REDIS_PASS"],
+                host=json_obj["CELERY_REDIS_ADDRESS"],
+                port=json_obj["CELERY_REDIS_PORT"],
+                ssl_ca_certs=json_obj["CELERY_REDIS_CA_FILE"],
+                ssl_certfile=json_obj["CELERY_REDIS_CERT_FILE"],
+                ssl_keyfile=json_obj["CELERY_REDIS_KEY_FILE"],
             )
+        except:
+            logger.warning(
+                "Invalid options for the Celery Redis connection! Can't form a connection!"
+            )
+            has_error = True
 
-        # Convert the json into a class (why not, probably better than a dictionary)
-        # Putting the mongodb connection in here may be very foolish. I might want to just connect multiple times.
+        # Closing if there's an error in the configuration
+        if has_error:
+            sys.exit()
+
+        # Convert the json into a class
+        # I'm choosing to store all the data in this class, instead of just the formed connections, in the event that
+        # I need to remake the connection.
         config_class = Config(
-            # Secret key for flask
+            # General
+            logger=logger,
+            ssl_path_type=str,
+            # Flask
             secret_key=json_obj["SECRET_KEY"],
             testing=json_obj["TESTING"],
             debug=json_obj["DEBUG"],
             flask_host=json_obj["FLASK_HOST"],
             flask_port=json_obj["FLASK_PORT"],
-            # Mongo config
+            flask_ssl=json_obj["FLASK_SSL"],
+            flask_key_file=json_obj["FLASK_KEY_FILE"],
+            flask_cert_file=json_obj["FLASK_CERT_FILE"],
+            # MongoDB
             mongo_addr=json_obj["MONGO_ADDRESS"],
             mongo_port=json_obj["MONGO_PORT"],
             mongo_user=json_obj["MONGO_USER"],
             mongo_passwd=json_obj["MONGO_PASS"],
             mongo_database=json_obj["MONGO_DATABASE"],
             mongo_ssl=json_obj["MONGO_SSL"],
-            mongo_key=json_obj["MONGO_SSL_FILE"],
-            mongo_con=mongo_client,
-            # Postgres config
+            mongo_ca_file=json_obj["MONGO_CA_FILE"],
+            mongo_ssl_file=json_obj["MONGO_SSL_FILE"],
+            mongo_con=mongo_connection,
+            # PostgreSQL
             postgre_addr=json_obj["POSTGRE_ADDRESS"],
             postgre_port=json_obj["POSTGRE_PORT"],
             postgre_user=json_obj["POSTGRE_USER"],
             postgre_passwd=json_obj["POSTGRE_PASS"],
             postgre_database=json_obj["POSTGRE_DATABASE"],
             postgre_ssl=json_obj["POSTGRE_SSL"],
-            postgre_key=json_obj["POSTGRE_KEY_FILE"],
-            postgre_cert=json_obj["POSTGRE_CERT_FILE"],
-            postgre_ca=json_obj["POSTGRE_CA_FILE"],
-            postgre_con=postgre_client,
-            # Celery/Redis config
+            postgre_ca_file=json_obj["POSTGRE_CA_FILE"],
+            postgre_key_file=json_obj["POSTGRE_KEY_FILE"],
+            postgre_cert_file=json_obj["POSTGRE_CERT_FILE"],
+            postgre_con=postgre_connection,
+            # Redis
             redis_addr=json_obj["REDIS_ADDRESS"],
             redis_port=json_obj["REDIS_PORT"],
+            redis_user=json_obj["REDIS_USER"],
             redis_passwd=json_obj["REDIS_PASS"],
+            redis_database=json_obj["REDIS_DATABASE"],
             redis_ssl=json_obj["REDIS_SSL"],
-            redis_key=json_obj["REDIS_KEY_FILE"],
-            redis_cert=json_obj["REDIS_CERT_FILE"],
-            redis_ca=json_obj["REDIS_CA_FILE"],
-            redis_con=redis_client,
+            redis_ca_file=json_obj["REDIS_CA_FILE"],
+            redis_key_file=json_obj["REDIS_KEY_FILE"],
+            redis_cert_file=json_obj["REDIS_CERT_FILE"],
+            redis_con=redis_connection,
+            # Celery
+            celery_redis_addr=json_obj["CELERY_REDIS_ADDRESS"],
+            celery_redis_port=json_obj["CELERY_REDIS_PORT"],
+            celery_redis_user=json_obj["CELERY_REDIS_USER"],
+            celery_redis_passwd=json_obj["CELERY_REDIS_PASS"],
+            celery_redis_database=json_obj["CELERY_REDIS_DATABASE"],
+            celery_redis_ssl=json_obj["CELERY_REDIS_SSL"],
+            celery_redis_ca_file=json_obj["CELERY_REDIS_CA_FILE"],
+            celery_redis_key_file=json_obj["CELERY_REDIS_KEY_FILE"],
+            celery_redis_cert_file=json_obj["CELERY_REDIS_CERT_FILE"],
             celery_dict=celery_dict,
-            # I don't even really need to store the password, address, and user name if I only make the connection here. We'll see if I change that later.
+            celery_con=1,  ### Need to change this,
         )
-        # print(auth.functions.auth_functions.removeExpiredSessions.name)  # TEMP: Checking celery
         return config_class
     # Create a file if it doesn't exist
     else:
         default_json = {
+            # General
+            "SSL_PATH_TYPE": "RELATIVE_ABSOLUTE",
             # Flask
             "SECRET_KEY": "YOUR_SECRET_KEY",
             "TESTING": "TRUE_OR_FALSE",
             "DEBUG": "TRUE_OR_FALSE",
             "FLASK_HOST": "YOUR_FLASK_HOST (local machine only 127.0.0.1 or 0.0.0.0 for other machines)",
             "FLASK_PORT": "YOUR_FLASK_PORT (Default 5000)",
-            # General
-            "SSL_PATH_TYPE": "RELATIVE_ABSOLUTE",
+            "FLASK_SSL": "TRUE_OR_FALSE",  # Note that this should only be used in testing. When deploying you'll use gunicorn and nginx, or a similar stack, to serve the application.
+            "FLASK_KEY_FILE": "PATH_TO_SSL_KEY",
+            "FLASK_CERT_FILE": "PATH_TO_SSL_CERT",
             # Mongodb
             "MONGO_ADDRESS": "ADDRESS_TO_MONGO (local machine 127.0.0.1 or another host)",
             "MONGO_PORT": "MONGO_PORT (Default 27017)",
             "MONGO_USER": "YOUR_MONGO_USER",
             "MONGO_PASS": "YOUR_MONGO_PASSWORD",
             "MONGO_DATABASE": "MONGO_DATABASE_NAME",
-            "MONGO_SSL": "NO, PLAIN, CERTIFICATE",  ###
-            "MONGO_CA_FILE": "PATH_TO_CA_FILE",  ####
+            "MONGO_SSL": "NO, PLAIN, CERTIFICATE",
+            "MONGO_CA_FILE": "PATH_TO_CA_FILE",
             "MONGO_SSL_FILE": "PATH_TO_SSL_FILE",
             # PostgreSQL
             "POSTGRE_ADDRESS": "ADDRESS_TO_POSTGRE (local machine 127.0.0.1 or another host)",
@@ -604,7 +615,7 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             "POSTGRE_USER": "YOUR_POSTGRE_USER",
             "POSTGRE_PASS": "YOUR_POSTGRE_PASSWORD",
             "POSTGRE_DATABASE": "POSTGRE_DATABASE_NAME",
-            "POSTGRE_SSL": "NO, PLAIN, CA_CERTIFICATE, FULL_CERTIFICATE",  ###
+            "POSTGRE_SSL": "NO, PLAIN, CA_CERTIFICATE, FULL_CERTIFICATE",
             "POSTGRE_CA_FILE": "PATH_TO_SSL_CA",
             "POSTGRE_KEY_FILE": "PATH_TO_SSL_KEY",
             "POSTGRE_CERT_FILE": "PATH_TO_SSL_CERT",
@@ -612,9 +623,9 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             "REDIS_ADDRESS": "ADDRESS_TO_REDIS (local machine 127.0.0.1 or another host)",
             "REDIS_PORT": "REDIS_PORT (Default 6379)",
             "REDIS_USER": "YOUR_REDIS_USER",
-            "REDIS_PASS": "YOUR_REDIS_PASSWORD",  ###
-            "REDIS_DATABASE": "REDIS_DATABASE_NUMBER",  ###
-            "REDIS_SSL": "NO, PLAIN, CERTIFICATE",  ###
+            "REDIS_PASS": "YOUR_REDIS_PASSWORD",
+            "REDIS_DATABASE": "REDIS_DATABASE_NUMBER",
+            "REDIS_SSL": "NO, PLAIN, CERTIFICATE",
             "REDIS_CA_FILE": "PATH_TO_SSL_CA",
             "REDIS_KEY_FILE": "PATH_TO_SSL_KEY",
             "REDIS_CERT_FILE": "PATH_TO_SSL_CERT",
@@ -622,9 +633,9 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             "CELERY_REDIS_ADDRESS": "ADDRESS_TO_CELERY_REDIS (local machine 127.0.0.1 or another host)",
             "CELERY_REDIS_PORT": "CELERY_REDIS_PORT (Default 6379)",
             "CELERY_REDIS_USER": "YOUR_CELERY_REDIS_USER",
-            "CELERY_REDIS_PASS": "YOUR_CELERY_REDIS_PASSWORD",  ###
-            "CELERY_REDIS_DATABASE": "CELERY_REDIS_DATABASE_NUMBER",  ###
-            "CELERY_REDIS_SSL": "NO, PLAIN, CERTIFICATE",  ###
+            "CELERY_REDIS_PASS": "YOUR_CELERY_REDIS_PASSWORD",
+            "CELERY_REDIS_DATABASE": "CELERY_REDIS_DATABASE_NUMBER",
+            "CELERY_REDIS_SSL": "NO, PLAIN, CERTIFICATE",
             "CELERY_REDIS_CA_FILE": "PATH_TO_SSL_CA",
             "CELERY_REDIS_KEY_FILE": "PATH_TO_SSL_KEY",
             "CELERY_REDIS_CERT_FILE": "PATH_TO_SSL_CERT",
