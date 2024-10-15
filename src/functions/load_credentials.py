@@ -26,7 +26,7 @@ import redis
 import ssl
 import logging
 import sys
-from typing import Union
+from typing import Union, Any, Type, Callable, Tuple
 
 
 # Function to check if a path exists
@@ -280,6 +280,52 @@ def connectCelery(
     return celery_dict
 
 
+# Function to validate data type
+def validateData(
+    test_data: Any,
+    desired_type: Type,
+    conversion_fun: Callable[[Any], Any],
+    parameter: str,
+    logger: logging.Logger,
+) -> Tuple[bool, Any]:
+    # Check if it's the correct type, and it's not a string (because we have multiple string conversion types)
+    if isinstance(test_data, desired_type) and not isinstance(test_data, str):
+        return (True, test_data)
+    # Try to to convert the data
+    try:
+        return (True, conversion_fun(test_data))
+    except:
+        logger.warning(
+            f'Value for "{parameter}" is the incorrect type. It must be a/an {str(desired_type)}.'
+        )
+        return (False, test_data)
+
+
+# Function to try and convert to a string (uppercase specifically)
+def convertStr(test_data: Any) -> str:
+    return str(test_data).upper()
+
+
+# Function to try and convert to a bool
+def convertBool(test_data: Any) -> bool:
+    # Check if the test_data is a string
+    if isinstance(test_data, str):
+        # Make it uppercase
+        uppper_data = test_data.upper()
+        # Check it for matching
+        if uppper_data == "TRUE":
+            return True
+        elif uppper_data == "FALSE":
+            return False
+    elif isinstance(test_data, int):
+        if test_data == 1:
+            return False
+        elif test_data == 0:
+            return True
+    # If it wasn't one of the above raise an error
+    raise Exception("Invalid Parameter")
+
+
 # Function to load our credentials
 def loadCredentials(running_path: pathlib.Path) -> Config:
     # Create a logger
@@ -296,10 +342,82 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             # Load the json
             json_obj = json.load(file)
 
+        # Attempting to validate the data types
+        for key, value in json_obj.items():
+            # Getting the type of conversion based off a list
+            # Strings (and paths) that need to be uppercase
+            if key in [
+                "SSL_PATH_TYPE",
+                "MONGO_SSL",
+                "POSTGRE_SSL",
+                "REDIS_SSL",
+                "CELERY_REDIS_SSL",
+            ]:
+                result, new_data = validateData(value, str, convertStr, key, logger)
+            # Strings (and paths) that need to be as they are
+            elif key in [
+                "SECRET_KEY",
+                "FLASK_HOST",
+                "FLASK_KEY_FILE",
+                "FLASK_CERT_FILE",
+                "MONGO_ADDRESS",
+                "MONGO_USER",
+                "MONGO_PASS",
+                "MONGO_DATABASE",
+                "MONGO_CA_FILE",
+                "MONGO_SSL_FILE",
+                "POSTGRE_ADDRESS",
+                "POSTGRE_USER",
+                "POSTGRE_PASS",
+                "POSTGRE_DATABASE",
+                "POSTGRE_CA_FILE",
+                "POSTGRE_KEY_FILE",
+                "POSTGRE_CERT_FILE",
+                "REDIS_ADDRESS",
+                "REDIS_USER",
+                "REDIS_PASS",
+                "REDIS_CA_FILE",
+                "REDIS_KEY_FILE",
+                "REDIS_CERT_FILE",
+                "CELERY_REDIS_ADDRESS",
+                "CELERY_REDIS_USER",
+                "CELERY_REDIS_PASS",
+                "CELERY_REDIS_CA_FILE",
+                "CELERY_REDIS_KEY_FILE",
+                "CELERY_REDIS_CERT_FILE",
+            ]:
+                result, new_data = validateData(value, str, str, key, logger)
+            # booleans
+            elif key in ["TESTING", "DEBUG", "FLASK_SSL"]:
+                # This could be problematic because any string that's not empty will be true and if empty it will be false
+                result, new_data = validateData(value, bool, convertBool, key, logger)
+            # integers
+            elif key in [
+                "FLASK_PORT",
+                "MONGO_PORT",
+                "POSTGRE_PORT",
+                "REDIS_PORT",
+                "REDIS_DATABASE",
+                "CELERY_REDIS_PORT",
+                "CELERY_REDIS_DATABASE",
+            ]:
+                result, new_data = validateData(value, int, int, key, logger)
+            # If the result is true we replace the old data (even if it's the same data)
+            if result:
+                json_obj[key] = new_data
+            # If it is not correct we acknowledge the error
+            else:
+                has_error = True
+        # Closing if there's an error in the configuration
+        if has_error:
+            sys.exit()
+        # Reset the error variable
+        has_error = False
+
         # Check for valid SSL types
         check_ssl_path = False
         if json_obj["FLASK_SSL"] in [True, False]:
-            if json_obj["MONGO_SSL"] == True:
+            if json_obj["FLASK_SSL"] == True:
                 check_ssl_path = True
         else:
             logger.warning(f'Invalid option for "FLASK_SSL"! It must be true or false')
@@ -331,6 +449,14 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
         else:
             logger.warning(
                 f'Invalid option for "REDIS_SSL"! It must be "NO", "PLAIN", or "CERTIFICATE"'
+            )
+            has_error = True
+        if json_obj["CELERY_REDIS_SSL"] in ["NO", "PLAIN", "CERTIFICATE"]:
+            if json_obj["CELERY_REDIS_SSL"] == "CERTIFICATE":
+                check_ssl_path = True
+        else:
+            logger.warning(
+                f'Invalid option for "CELERY_REDIS_SSL"! It must be "NO", "PLAIN", or "CERTIFICATE"'
             )
             has_error = True
         # Checking the SSL path type
@@ -366,6 +492,9 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                     has_error = checkPath(flask_key_path, has_error, "FLASK_KEY_FILE")
                     flask_cert_path = pathlib.Path(json_obj["FLASK_CERT_FILE"])
                     has_error = checkPath(flask_cert_path, has_error, "FLASK_CERT_FILE")
+            else:
+                flask_key_path = json_obj["FLASK_KEY_FILE"]
+                flask_cert_path = json_obj["FLASK_CERT_FILE"]
             # Check for Mongo
             if json_obj["MONGO_SSL"] == "CERTIFICATE":
                 # If we're using relative paths
@@ -384,6 +513,9 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                     has_error = checkPath(mongo_ca_path, has_error, "MONGO_CA_FILE")
                     mongo_ssl_path = pathlib.Path(json_obj["MONGO_SSL_FILE"])
                     has_error = checkPath(mongo_ssl_path, has_error, "MONGO_SSL_FILE")
+            else:
+                mongo_ca_path = json_obj["MONGO_CA_FILE"]
+                mongo_ssl_path = json_obj["MONGO_SSL_FILE"]
             # Check for Postgre
             if json_obj["POSTGRE_SSL"] in ["CA_CERTIFICATE", "FULL_CERTIFICATE"]:
                 # If we're using relative paths
@@ -420,6 +552,10 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                         has_error = checkPath(
                             postgre_cert_path, has_error, "POSTGRE_CERT_FILE"
                         )
+            else:
+                postgre_ca_path = json_obj["POSTGRE_CA_FILE"]
+                postgre_key_path = json_obj["POSTGRE_KEY_FILE"]
+                postgre_cert_path = json_obj["POSTGRE_CERT_FILE"]
             # Check for Redis
             if json_obj["REDIS_SSL"] == "CERTIFICATE":
                 # If we're using relative paths
@@ -444,6 +580,57 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                     has_error = checkPath(redis_key_path, has_error, "REDIS_KEY_FILE")
                     redis_cert_path = pathlib.Path(json_obj["REDIS_CERT_FILE"])
                     has_error = checkPath(redis_cert_path, has_error, "REDIS_CERT_FILE")
+            else:
+                redis_ca_path = json_obj["REDIS_CA_FILE"]
+                redis_key_path = json_obj["REDIS_KEY_FILE"]
+                redis_cert_path = json_obj["REDIS_CERT_FILE"]
+
+            # Check for Celery
+            if json_obj["CELERY_REDIS_ADDRESS"] == "CERTIFICATE":
+                # If we're using relative paths
+                if json_obj["SSL_PATH_TYPE"] == "RELATIVE":
+                    celery_redis_ca_path = pathlib.Path.joinpath(
+                        script_path, json_obj["CELERY_REDIS_CA_FILE"]
+                    )
+                    has_error = checkPath(
+                        celery_redis_ca_path, has_error, "CELERY_REDIS_CA_FILE"
+                    )
+                    celery_redis_key_path = pathlib.Path.joinpath(
+                        script_path, json_obj["CELERY_REDIS_KEY_FILE"]
+                    )
+                    has_error = checkPath(
+                        celery_redis_key_path, has_error, "CELERY_REDIS_KEY_FILE"
+                    )
+                    celery_redis_cert_path = pathlib.Path.joinpath(
+                        script_path, json_obj["CELERY_REDIS_CERT_FILE"]
+                    )
+                    has_error = checkPath(
+                        celery_redis_cert_path, has_error, "CELERY_REDIS_CERT_FILE"
+                    )
+                # If we're using absolute paths
+                else:
+                    celery_redis_ca_path = pathlib.Path(
+                        json_obj["CELERY_REDIS_CA_FILE"]
+                    )
+                    has_error = checkPath(
+                        celery_redis_ca_path, has_error, "CELERY_REDIS_CA_FILE"
+                    )
+                    celery_redis_key_path = pathlib.Path(
+                        json_obj["CELERY_REDIS_KEY_FILE"]
+                    )
+                    has_error = checkPath(
+                        celery_redis_key_path, has_error, "CELERY_REDIS_KEY_FILE"
+                    )
+                    celery_redis_cert_path = pathlib.Path(
+                        json_obj["CELERY_REDIS_CERT_FILE"]
+                    )
+                    has_error = checkPath(
+                        celery_redis_cert_path, has_error, "CELERY_REDIS_CERT_FILE"
+                    )
+            else:
+                celery_redis_ca_path = json_obj["CELERY_REDIS_CA_FILE"]
+                celery_redis_key_path = json_obj["CELERY_REDIS_KEY_FILE"]
+                celery_redis_cert_path = json_obj["CELERY_REDIS_CERT_FILE"]
         # Closing if there's an error in the configuration
         if has_error:
             sys.exit()
@@ -459,8 +646,8 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                 password=json_obj["MONGO_PASS"],
                 host=json_obj["MONGO_ADDRESS"],
                 port=json_obj["MONGO_PORT"],
-                tlsCAFile=json_obj["MONGO_CA_FILE"],
-                tlsCertificateKeyFile=json_obj["MONGO_SSL_FILE"],
+                tlsCAFile=mongo_ca_path,
+                tlsCertificateKeyFile=mongo_ssl_path,
             )
         except:
             logger.warning(
@@ -475,9 +662,9 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                 password=json_obj["POSTGRE_PASS"],
                 host=json_obj["POSTGRE_ADDRESS"],
                 port=json_obj["POSTGRE_PORT"],
-                sslrootcert=json_obj["POSTGRE_CA_FILE"],
-                sslcert=json_obj["POSTGRE_CERT_FILE"],
-                sslkey=json_obj["POSTGRE_KEY_FILE"],
+                sslrootcert=postgre_ca_path,
+                sslcert=postgre_cert_path,
+                sslkey=postgre_key_path,
             )
         except:
             logger.warning(
@@ -492,9 +679,9 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                 password=json_obj["REDIS_PASS"],
                 host=json_obj["REDIS_ADDRESS"],
                 port=json_obj["REDIS_PORT"],
-                ssl_ca_certs=json_obj["REDIS_CA_FILE"],
-                ssl_certfile=json_obj["REDIS_CERT_FILE"],
-                ssl_keyfile=json_obj["REDIS_KEY_FILE"],
+                ssl_ca_certs=redis_ca_path,
+                ssl_certfile=redis_cert_path,
+                ssl_keyfile=redis_key_path,
             )
         except:
             logger.warning(
@@ -510,9 +697,9 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                 password=json_obj["CELERY_REDIS_PASS"],
                 host=json_obj["CELERY_REDIS_ADDRESS"],
                 port=json_obj["CELERY_REDIS_PORT"],
-                ssl_ca_certs=json_obj["CELERY_REDIS_CA_FILE"],
-                ssl_certfile=json_obj["CELERY_REDIS_CERT_FILE"],
-                ssl_keyfile=json_obj["CELERY_REDIS_KEY_FILE"],
+                ssl_ca_certs=celery_redis_ca_path,
+                ssl_certfile=celery_redis_cert_path,
+                ssl_keyfile=celery_redis_key_path,
             )
         except:
             logger.warning(
@@ -529,15 +716,15 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
         # I need to remake the connection.
         config_class = Config(
             # General
-            logger=logger,
-            ssl_path_type=str,
+            logger=logger,  #
+            ssl_path_type=json_obj["SSL_PATH_TYPE"],  #
             # Flask
             secret_key=json_obj["SECRET_KEY"],
             testing=json_obj["TESTING"],
             debug=json_obj["DEBUG"],
             flask_host=json_obj["FLASK_HOST"],
             flask_port=json_obj["FLASK_PORT"],
-            flask_ssl=json_obj["FLASK_SSL"],
+            flask_ssl=json_obj["FLASK_SSL"],  #
             flask_key_file=json_obj["FLASK_KEY_FILE"],
             flask_cert_file=json_obj["FLASK_CERT_FILE"],
             # MongoDB
@@ -546,9 +733,9 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             mongo_user=json_obj["MONGO_USER"],
             mongo_passwd=json_obj["MONGO_PASS"],
             mongo_database=json_obj["MONGO_DATABASE"],
-            mongo_ssl=json_obj["MONGO_SSL"],
-            mongo_ca_file=json_obj["MONGO_CA_FILE"],
-            mongo_ssl_file=json_obj["MONGO_SSL_FILE"],
+            mongo_ssl=json_obj["MONGO_SSL"],  #
+            mongo_ca_file=mongo_ca_path,
+            mongo_ssl_file=mongo_ssl_path,
             mongo_con=mongo_connection,
             # PostgreSQL
             postgre_addr=json_obj["POSTGRE_ADDRESS"],
@@ -556,10 +743,10 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             postgre_user=json_obj["POSTGRE_USER"],
             postgre_passwd=json_obj["POSTGRE_PASS"],
             postgre_database=json_obj["POSTGRE_DATABASE"],
-            postgre_ssl=json_obj["POSTGRE_SSL"],
-            postgre_ca_file=json_obj["POSTGRE_CA_FILE"],
-            postgre_key_file=json_obj["POSTGRE_KEY_FILE"],
-            postgre_cert_file=json_obj["POSTGRE_CERT_FILE"],
+            postgre_ssl=json_obj["POSTGRE_SSL"],  #
+            postgre_ca_file=postgre_ca_path,
+            postgre_key_file=postgre_key_path,
+            postgre_cert_file=postgre_cert_path,
             postgre_con=postgre_connection,
             # Redis
             redis_addr=json_obj["REDIS_ADDRESS"],
@@ -567,10 +754,10 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             redis_user=json_obj["REDIS_USER"],
             redis_passwd=json_obj["REDIS_PASS"],
             redis_database=json_obj["REDIS_DATABASE"],
-            redis_ssl=json_obj["REDIS_SSL"],
-            redis_ca_file=json_obj["REDIS_CA_FILE"],
-            redis_key_file=json_obj["REDIS_KEY_FILE"],
-            redis_cert_file=json_obj["REDIS_CERT_FILE"],
+            redis_ssl=json_obj["REDIS_SSL"],  #
+            redis_ca_file=redis_ca_path,
+            redis_key_file=redis_key_path,
+            redis_cert_file=redis_cert_path,
             redis_con=redis_connection,
             # Celery
             celery_redis_addr=json_obj["CELERY_REDIS_ADDRESS"],
@@ -578,10 +765,10 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             celery_redis_user=json_obj["CELERY_REDIS_USER"],
             celery_redis_passwd=json_obj["CELERY_REDIS_PASS"],
             celery_redis_database=json_obj["CELERY_REDIS_DATABASE"],
-            celery_redis_ssl=json_obj["CELERY_REDIS_SSL"],
-            celery_redis_ca_file=json_obj["CELERY_REDIS_CA_FILE"],
-            celery_redis_key_file=json_obj["CELERY_REDIS_KEY_FILE"],
-            celery_redis_cert_file=json_obj["CELERY_REDIS_CERT_FILE"],
+            celery_redis_ssl=json_obj["CELERY_REDIS_SSL"],  #
+            celery_redis_ca_file=celery_redis_ca_path,
+            celery_redis_key_file=celery_redis_key_path,
+            celery_redis_cert_file=celery_redis_cert_path,
             celery_dict=celery_dict,
             celery_con=1,  ### Need to change this,
         )

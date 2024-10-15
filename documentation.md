@@ -71,6 +71,38 @@ A python script that holds the function to load the credentials held in the conf
 
 A function that loads the configuration information from /config.json
 
+### convertBool
+
+A function that converts passed data to a valid boolean.
+
+### convertStr
+
+A function that converts passed data to a valid uppercase string.
+
+### validateData
+
+A function that validates the data type of data and attempts to convert the data if it's incorrect.
+
+### connectCelery
+
+A function that attempts to form a connection to celery and the backend redis database.
+
+### connectRedis
+
+A function that attempts to form a connection to redis.
+
+### connectPostgre
+
+A function that attempts to form a connection to PostgreSQL.
+
+### connectMongo
+
+A function that attempts to form a connection to MongoDB.
+
+### checkPath
+
+A function that checks if a path exists.
+
 ---
 ---
 

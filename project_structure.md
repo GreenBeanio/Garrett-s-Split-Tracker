@@ -70,7 +70,8 @@
     - @python.dockerfile: The dockerfile to set up the container for handling python
 - @project_structure.md: Document trying to explain the structure
 - @api_structure.md: Document trying to explain the api structure
-- @setup_notes.md: notes on the setup process
+- @database_structure.md: Document trying to explain the database structure
+- @linux_setup.md: Instructions on setting up the project in Linux
 - @README.md: Main introduction to the project
 - @LICENSE: The license of this project
 - @NOTES.md: Random notes to remind myself
