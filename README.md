@@ -8,15 +8,13 @@ This application DOES NOT run on windows! (unless using Docker, which I haven't 
 
 ### Linux
 
-- Initial Run
-  - cd /your/folder
-  - python3 -m venv env
-  - source env/bin/activate
-  - See Below
-- Running After
-  - cd /your/folder
-  - source env/bin/activate
-  - See Below
+#### Initial Run
+
+- cd /your/folder
+- python3 -m venv env
+- source env/bin/activate
+- pip install -r requirements.txt
+- See Below
 
 #### Flask
 

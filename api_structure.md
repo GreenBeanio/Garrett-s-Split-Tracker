@@ -1,11 +1,7 @@
 # Structure of the API
 
-("#" meaning in progress)
-
 - Symbols
-  - o7 separates the endpoint, method, type, and description
   - ! Means it's being worked on
-  - & Ignored by git
   - \<type:argument>
 
 | Endpoint | Method | Type | Description |

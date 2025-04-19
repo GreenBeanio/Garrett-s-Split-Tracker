@@ -7,10 +7,10 @@
 # Author(s): [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Maintainer: [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
-# File Description: [Functions for the Auth module]
+# File Description: [Main Project]
 
 """
-Contains functions for the Auth module of the Split Tracker
+The main project. Not sure if I really need this __init__.py or if it's a bad idea
 """
 
 # Footer Comment

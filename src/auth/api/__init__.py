@@ -7,10 +7,10 @@
 # Author(s): [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Maintainer: [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
-# File Description: [Functions for the Auth module]
+# File Description: [API Routes for the Auth module]
 
 """
-Contains functions for the Auth module of the Split Tracker
+Contains API Routes for the Auth module of the Split Tracker
 """
 
 # Footer Comment

@@ -1,6 +1,6 @@
 # Header Comment
 # Project: [Garrett's Split Tracker] [https://github.com/GreenBeanio/Garrett-s-Split-Tracker]
-# Copyright: Copyright (c) [2024]-[2024] [Garrett's Split Tracker] Contributors
+# Copyright: Copyright (c) [2024]-[2025] [Garrett's Split Tracker] Contributors
 # Version: [0.1]
 # Status: [Development]
 # License: [MIT]
@@ -12,15 +12,6 @@
 # Package Imports
 import datetime
 
-
-# test class just to store users
-class UserObj:
-    def __init__(self, username: str, hash_pass: str, salt: str):
-        self.username = username
-        self.hash_pass = hash_pass
-        self.salt = salt
-
-
 # Test class to store sessions for authentication
 class UserAuth:
     def __init__(self, user: str, auth: str, ip: str, exp: datetime):
@@ -29,7 +20,6 @@ class UserAuth:
         self.ip = ip
         self.exp = exp
 
-
 # Footer Comment
 # History of Contributions:
-# [2024-2024] - [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio] - [The entire document]
+# [2024-2025] - [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio] - [The entire document]

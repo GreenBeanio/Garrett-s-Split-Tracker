@@ -1,7 +1,5 @@
 # Structure of the project
 
-("#" meaning in progress)
-
 - Symbols
   - / is a directory
   - @ is a file
@@ -9,12 +7,12 @@
   - & Ignored by git
 
 - /Root: Everything (as well as misc files for now)
-  - /restructured: trying to tidy up the flask program for later
-    - &@ config.json: The configuration file for the application
+  - /src: The main code
+    - &@config.json: The configuration file for the application
     - @requirements.txt: The requirements file for pip
     - @main.py: The main file to create the flask application factory
     - @make_celery.py: The file for creating celery workers
-    - @stored_credentials.py: A file holding a variable that stores the config information
+    - @main.py: A file holding a variable that stores the config information
     - /static: the main static directory for flask
       - /js: main directory for javascript
         - @cookies.js: A script to get the cookie information from the current webpage

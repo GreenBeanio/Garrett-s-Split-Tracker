@@ -9,61 +9,15 @@
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
 # File Description: [Creates the flask and celery apps.]
 
-# from functions.load_credentials import loadCredentials
-from stored_credentials import app_config
+# Import Credentials
+#from main import app_config
 
 # My imports
-from classes.credentials import Config
-from auth.functions.auth_functions import getUserAuthCookiesStatus
+from functions.fn_createFlaskApp import createFlaskApp
+from functions.fn_addBlueprints import addBlueprints
 
-# My blueprints
-from auth.auth import auth_bp
-from tracker.tracker import tracker_bp
-
-
-# Package Imports
-from flask import Flask
-from flask import request
-from flask import render_template
-from celery import Celery
-from celery import Task
-
-
-# Creating the celery app (Straight from the Flask documentation, I don't understand celery yet)
-def celeryInitApp(flask_app: Flask) -> Celery:
-    class FlaskTask(Task):
-        def __call__(self, *args: object, **kwargs: object) -> object:
-            with flask_app.app_context():
-                return self.run(*args, **kwargs)
-
-    celery_app = Celery(flask_app.name, task_cls=FlaskTask)
-    celery_app.config_from_object(flask_app.config["CELERY"])
-    celery_app.set_default()  # Oh my god all my trouble was because I missed this line when I copied it in :cry:
-    flask_app.extensions["celery"] = celery_app
-    return celery_app
-
-
-# Creating the flask app (factory no passing name)
-def createFlaskApp(config: Config) -> Flask:
-    # Load the config
-    # Creating the flask app
-    flask_app = Flask(__name__)
-    flask_app.config.update(Testing=config.testing, SECRET_KEY=config.secret_key)
-    # flask_app.config.update(SERVER_NAME="your_domain.com") # Not sure about this yet
-    # Add the stuff for celery
-    flask_app.config.from_mapping(CELERY=config.celery_dict)
-    flask_app.config.from_prefixed_env()
-    celeryInitApp(flask_app)
-    # Create the dictionary to return
-    return flask_app
-
-
-# Add blueprints to the flask apt
-def addBlueprints(app: Flask):
-    flask_app.register_blueprint(auth_bp)
-    flask_app.register_blueprint(tracker_bp)
-    return app
-
+from functions.fn_loadCredentials import loadCredentials
+app_config = loadCredentials(__file__)  # Using the location of this main file
 
 # Create the apps
 flask_app = createFlaskApp(app_config)
@@ -72,26 +26,28 @@ flask_app = createFlaskApp(app_config)
 # celery_app: Celery = flask_app.extensions["celery"]
 
 # Add the blueprints
-flask_app_blue = addBlueprints(flask_app)
-
-
-# Creating the main index route (Don't know if I want to put this into a blueprint or just leave it here)
-@flask_app_blue.get("/")
-def index() -> None:
-    # Get information about if the user is logged in
-    c_user, auth_status = getUserAuthCookiesStatus(request, app_config)
-    # Returning the welcome page
-    return render_template("home.j2", logged_in=auth_status, user=c_user)
-
+flask_app = addBlueprints(flask_app)
 
 # Show the blueprint map
-# print(flask_app_blue.url_map)
+print(flask_app.url_map)
 
 # Start the flask app
 if __name__ == "__main__":
-    flask_app_blue.run(
-        host=app_config.flask_host, port=app_config.flask_port, debug=app_config.debug
-    )
+    # If we're using SSL with Flask (Only use this for testing! On deployment do it through Gunicorn and Nginx)
+    if app_config.flask_ssl:
+        flask_app.run(
+            host=app_config.flask_host,
+            port=app_config.flask_port,
+            debug=app_config.debug,
+            ssl_context=(app_config.flask_cert_file, app_config.flask_key_file),
+        )
+    # Run Flask without SSL
+    else:
+        flask_app.run(
+            host=app_config.flask_host,
+            port=app_config.flask_port,
+            debug=app_config.debug,
+        )
 
 # Then use these cli commands (running flask first seems to matter, but the order of these 2 doesn't really,
 # but I start the beat first because the worker needs it):

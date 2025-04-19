@@ -11,7 +11,6 @@ Project Description: [This project is used to track "splits" in games or activit
 File Description: [JavaScript to validate the password]
 */
 
-
 // Function to validate the password
 function validatePassword() {
     // Get the passwords

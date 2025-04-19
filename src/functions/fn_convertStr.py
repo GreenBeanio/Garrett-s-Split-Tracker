@@ -7,11 +7,23 @@
 # Author(s): [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Maintainer: [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
-# File Description: [Functions for the Auth module]
+# File Description: [Convert to an uppercase string]
 
-"""
-Contains functions for the Auth module of the Split Tracker
-"""
+# Package Imports
+from typing import Any
+
+# Function to try and convert to a string (uppercase specifically)
+def convertStr(test_data: Any) -> str:
+    """
+    Convert to uppercase string
+
+    :param test_data: Data to test
+    :type test_data: Any
+
+    :return: The upper case string
+    :rtype: str
+    """
+    return str(test_data).upper()
 
 # Footer Comment
 # History of Contributions:

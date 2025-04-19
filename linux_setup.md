@@ -55,46 +55,52 @@ Maybe add notes on setting up the basic linux stuff like disabling passwords and
 ## Creating a user to access this project (for backups and stuff)
 
 - Create the user
-  - sudo useradd -m -d /home/projects -s /bin/bash split_tracker
+  - sudo useradd -m -d /home/u_split_tracker -s /bin/bash split_tracker
 - Add a password to the user
   - sudo passwd split_tracker
 - Create the ssh directory
-  - sudo mkdir /home/projects/.ssh
+  - sudo mkdir /home/u_split_tracker/.ssh
 - Copy the ssh key in
-  - sudo touch /home/projects/.ssh/authorized_keys
+  - sudo touch /home/u_split_tracker/.ssh/authorized_keys
     - Put the public keys into the file (however you want. Here are some options)
-      - curl file_somewhere >> /home/projects/.ssh/authorized_keys
-      - Vim /home/projects/.ssh/authorized_keys
+      - curl file_somewhere >> /home/u_split_tracker/.ssh/authorized_keys
+      - Vim /home/u_split_tracker/.ssh/authorized_keys
 - Set the directory permissions
-  - sudo chown -R split_tracker:split_tracker /home/projects/.ssh
-  - sudo chmod 700 /home/projects/.ssh
-  - sudo chmod 600 /home/projects/.ssh/authorized_keys
+  - sudo chown -R split_tracker:split_tracker /home/u_split_tracker/.ssh
+  - sudo chmod 700 /home/u_split_tracker/.ssh
+  - sudo chmod 600 /home/u_split_tracker/.ssh/authorized_keys
 - Add a group
   - sudo usermod -a -G databases split_tracker
 
 ## Creating a directory to store files for this project
 
 - Switch to the split_tracker user
-  - sudo -u split_tracker
+  - sudo su split_tracker
 
 - Create the directory
-  - sudo mkdir /projects
+  - mkdir /projects
   - cd /projects
 - Creating the directory for SSL
-  - sudo mkdir ssl
+  - mkdir ssl
 - Creating a directory for storing links to config files
-  - sudo mkdir configs
+  - mkdir configs
 - Creating a directory for storing links to log files
-  - sudo mkdir logs
+  - mkdir logs
+
+- Creating a directory to store the project files
+  - mkdir split_tracker
 
 - Changing the ownership and permissions
   - Change the ownership
-    - sudo chown -R split_tracker:databases /projects
+    - chown -R split_tracker:databases /projects
   - Change the permissions
-    - sudo chmod -R u=rwx,g=rwx,o=rx /projects
+    - chmod -R u=rwx,g=rwx,o=rx /projects
 
 - Exit the user
   - exit
+
+- Changing the ownership of the base project folder (because you may have multiple projects)
+  - sudo chown root:databases /projects
 
 ## Downloading the files for this project
 
@@ -152,6 +158,8 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
     - sudo python3 -m venv /opt/certbot/
     - sudo /opt/certbot/bin/pip install --upgrade pip
     - sudo /opt/certbot/bin/pip install certbot
+      - You may also want to install this as well if using nginx
+        - sudo /opt/certbot/bin/pip install certbot-nginx
     - sudo ln -s /opt/certbot/bin/certbot /usr/bin/certbot
     - Depending on if your web server is currently running
       - If it isn running
@@ -185,7 +193,7 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
         - ```redis.youredomain.xxx```
         - ```www.youredomain.xxx```
         - ```youredomain.xxx```
-      - Realistically you don't actually even need to do the mongo, postgre, and redis subdomains if they're all running locally on one machine or on a local network, you also wouldn't even need to set up ssl for them. However, while developing this I am using a separate server for the databases and my local machine for running the program. It's still on a local network though which negates the need for all of this ssl and domain actions, but it's a good learning experience to experiment with it. If you're running everything locally you can feel free to ignore everything involving ssl on the databases and their subdomains. However, you should still set up www and the base domain with ssl because you're going to need HTTPS if you're not a goober.
+      - Realistically you don't actually even need to do the mongo, postgres, and redis subdomains if they're all running locally on one machine or on a local network, you also wouldn't even need to set up ssl for them. However, while developing this I am using a separate server for the databases and my local machine for running the program. It's still on a local network though which negates the need for all of this ssl and domain actions, but it's a good learning experience to experiment with it. If you're running everything locally you can feel free to ignore everything involving ssl on the databases and their subdomains. However, you should still set up www and the base domain with ssl because you're going to need HTTPS if you're not a goober.
       - Also note that if using dynamic dns through ddclient you will need to add all the subdomains in there too.
     - Set up automatic renewal
       - <pre><code>echo "0 0,12 ** *root /opt/certbot/bin/python -c 'import random; import time; time.sleep(random.random()* 3600)' && sudo certbot renew -q" | sudo tee -a /etc/crontab > /dev/null</code></pre>
@@ -195,6 +203,14 @@ I currently use NameCheap for my domains and you can use dynamic DNS with them t
       - sudo certbot renew -q
       - If using the custom location it's
         - sudo certbot renew --config-dir /projects/ssl -q
+          - If it wont let you because of a port being in use do this
+            - sudo netstat -tlnp | grep port#
+            - sudo systemctl stop service_using_port
+            - sudo certbot renew --config-dir /projects/ssl -q
+              - Remove the -q flag if you want to see details
+            - sudo systemctl start service_you_stopped
+      - You can also check current certificates with this
+        - sudo certbot certificates
     - If you ever need to update certbot run
       - sudo /opt/certbot/bin/pip install --upgrade certbot
     - You can view certificates with this command

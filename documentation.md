@@ -45,7 +45,7 @@ A function used to add periodic tasks (beats) to celery.
 ---
 ---
 
-## /stored_credentials.py
+## /main.py
 
 A python script that only serves the purpose of storing the app configuration variable for other python modules to call.
 
@@ -65,7 +65,7 @@ A class that holds the configuration information.
 
 ## /functions/load_credentials.py
 
-A python script that holds the function to load the credentials held in the configuration file.
+A python script that holds the functions to load, validate, and process the credentials held in the configuration file.
 
 ### loadCredentials
 
@@ -385,9 +385,6 @@ A jinja file that renders a users tracking interface.
 ## /tracker/templates/tracker.j2
 
 A jinja file that renders a users activities interface.
-
----
----
 
 ---
 ---

@@ -1,333 +1,45 @@
 # Header Comment
 # Project: [Garrett's Split Tracker] [https://github.com/GreenBeanio/Garrett-s-Split-Tracker]
-# Copyright: Copyright (c) [2024]-[2024] [Garrett's Split Tracker] Contributors
+# Copyright: Copyright (c) [2024]-[2025] [Garrett's Split Tracker] Contributors
 # Version: [0.1]
 # Status: [Development]
 # License: [MIT]
 # Author(s): [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Maintainer: [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
-# File Description: [Loads the credentials]
+# File Description: [A file to load the credentials into a Class Object from a JSON file]
 
 # My Imports
-from classes.credentials import Config
+from classes.cl_Config import Config
+from functions.fn_validateData import validateData
+from functions.fn_convertStr import convertStr
+from functions.fn_convertBool import convertBool
+from functions.fn_checkPath import checkPath
+from functions.fn_connectMongo import connectMongo
+from functions.fn_connectPostgre import connectPostgre
+from functions.fn_connectRedis import connectRedis
+from functions.fn_connectCelery import connectCelery
 
-# My Imports for celery beats
-# import auth.functions.auth_functions
-
-# Imports
+# Package Imports
 import json
 import pathlib
-import sys
-from pymongo import MongoClient
-import datetime
-import psycopg2
-import redis
-import ssl
 import logging
 import sys
-from typing import Union, Any, Type, Callable, Tuple
-
-
-# Function to check if a path exists
-def checkPath(
-    path: pathlib.Path, has_error: bool, variable: str, log: logging.Logger
-) -> bool:
-    # If the path exists return a result based off the existing has_error
-    if pathlib.Path.exists(path):
-        return has_error
-    # If the path doesn't exist return an error
-    else:
-        log.warning(f'Invalid path for "{variable}"')
-        return True
-
-
-# Function to create Mongo Connection
-def connectMongo(
-    connection_type: str,
-    authSource: str,
-    username: str,
-    password: str,
-    host: str,
-    port: int,
-    tlsCAFile: Union[pathlib.Path, None],
-    tlsCertificateKeyFile: Union[pathlib.Path, None],
-) -> MongoClient:
-    # If there's no SSL
-    if connection_type == "NO":
-        mongo_client = MongoClient(
-            authSource=authSource,
-            username=username,
-            password=password,
-            host=host,
-            port=port,
-        )
-    # If there's SSL
-    elif connection_type == "PLAIN":
-        mongo_client = MongoClient(
-            authSource=authSource,
-            username=username,
-            password=password,
-            host=host,
-            port=port,
-            tls=True,
-        )
-    # If there's SSL with Certificates
-    elif connection_type == "CERTIFICATE":
-        mongo_client = MongoClient(
-            authSource=authSource,
-            username=username,
-            password=password,
-            host=host,
-            port=port,
-            tls=True,
-            tlsCAFile=tlsCAFile,
-            tlsCertificateKeyFile=tlsCertificateKeyFile,
-        )
-    # print(f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource={json_obj["MONGO_DATABASE"]}&tls=true&tlsCAFILE={json_obj["MONGO_SSL_FILE"]}')
-    # print(f'mongodb://{json_obj["MONGO_USER"]}:{json_obj["MONGO_PASS"]}@{json_obj["MONGO_ADDRESS"]}:{json_obj["MONGO_PORT"]}/?authSource={json_obj["MONGO_DATABASE"]}')
-    # print(mongo_client)
-    # print(mongo_client.server_info())
-    # Return the resulting connection
-    return mongo_client
-
-
-# Function to create Postgre Connection
-def connectPostgre(
-    connection_type: str,
-    database: str,
-    user: str,
-    password: str,
-    host: str,
-    port: int,
-    sslrootcert: Union[pathlib.Path, None],
-    sslcert: Union[pathlib.Path, None],
-    sslkey: Union[pathlib.Path, None],
-) -> psycopg2:  # Not sure on the type
-    # If there's no SSL
-    if connection_type == "NO":
-        postgre_client = psycopg2.connect(
-            database=database,
-            user=user,
-            password=password,
-            host=host,
-            port=port,
-        )
-    # If there's SSL
-    elif connection_type == "PLAIN":
-        postgre_client = psycopg2.connect(
-            database=database,
-            user=user,
-            password=password,
-            host=host,
-            port=port,
-            sslmode="require",
-        )
-    # If there's SSL verifying CA
-    elif connection_type == "CA_CERTIFICATE":
-        postgre_client = psycopg2.connect(
-            database=database,
-            user=user,
-            password=password,
-            host=host,
-            port=port,
-            sslmode="verify-ca",
-            sslrootcert=sslrootcert,
-        )
-    # If there's SSL verifying full
-    elif connection_type == "FULL_CERTIFICATE":
-        postgre_client = psycopg2.connect(
-            database=database,
-            user=user,
-            password=password,
-            host=host,
-            port=port,
-            sslmode="verify-full",
-            sslrootcert=sslrootcert,
-            sslcert=sslcert,
-            sslkey=sslkey,
-        )
-    # Return the resulting connection
-    return postgre_client
-
-
-# Function to create Redis Connection
-def connectRedis(
-    connection_type: str,
-    db: int,
-    username: str,
-    password: str,
-    host: str,
-    port: int,
-    ssl_ca_certs: Union[pathlib.Path, None],
-    ssl_certfile: Union[pathlib.Path, None],
-    ssl_keyfile: Union[pathlib.Path, None],
-) -> redis.Redis:  # Not sure on the type
-    # If there's no SSL
-    if connection_type == "NO":
-        redis_client = redis.Redis(
-            db=db,
-            username=username,
-            password=password,
-            host=host,
-            port=port,
-        )
-    # If there's SSL
-    elif connection_type == "PLAIN":
-        redis_client = redis.Redis(
-            db=db,
-            username=username,
-            password=password,
-            host=host,
-            port=port,
-            ssl=True,
-            # ssl_cert_reqs=???
-        )
-    # If there's SSL with Certificates
-    elif connection_type == "CERTIFICATE":
-        redis_client = redis.Redis(
-            db=db,
-            username=username,
-            password=password,
-            host=host,
-            port=port,
-            ssl=True,
-            # ssl_cert_reqs=???
-            ssl_ca_certs=ssl_ca_certs,
-            ssl_certfile=ssl_certfile,
-            ssl_keyfile=ssl_keyfile,
-        )
-    # Return the resulting connection
-    return redis_client
-
-
-# Function to create Celery Connection
-def connectCelery(
-    connection_type: str,
-    db: int,
-    username: str,
-    password: str,
-    host: str,
-    port: int,
-    ssl_ca_certs: Union[pathlib.Path, None],
-    ssl_certfile: Union[pathlib.Path, None],
-    ssl_keyfile: Union[pathlib.Path, None],
-) -> dict:
-    # If there's no SSL
-    if connection_type == "NO":
-        # Create the celery dict
-        redis_uri = f"redis://{username}:{password}@{host}:{port}/{db}"
-        celery_dict = dict(
-            broker_url=redis_uri,
-            result_backend=redis_uri,
-            task_ignore_result=True,
-            # Beat schedule for timing repetitive events (You can set up the schedules in here like this too instead of with the functions)
-            # "task-name" : {"task": "function", "schedule": time_in_seconds}
-            # beat_schedule={
-            #     "task-every-minute": {
-            #         "task": "auth.functions.auth_functions.removeExpiredSessions",
-            #         "schedule": datetime.timedelta(seconds=1),
-            #     }
-            # },
-        )
-    # If there's SSL
-    elif connection_type == "PLAIN":
-        # Create the celery dict
-        redis_uri = f"redis://{username}:{password}@{host}:{port}/{db}"
-        celery_dict = dict(
-            broker_url=redis_uri,
-            result_backend=redis_uri,
-            task_ignore_result=True,
-            # Beat schedule for timing repetitive events (You can set up the schedules in here like this too instead of with the functions)
-            # "task-name" : {"task": "function", "schedule": time_in_seconds}
-            # beat_schedule={
-            #     "task-every-minute": {
-            #         "task": "auth.functions.auth_functions.removeExpiredSessions",
-            #         "schedule": datetime.timedelta(seconds=1),
-            #     }
-            # },
-            broker_use_ssl={
-                "keyfile": ssl_keyfile,
-                "certfile": ssl_certfile,
-                "ca_certs": ssl_ca_certs,
-                "cert_reqs": ssl.CERT_NONE,  # Maybe set this to "ssl.CERT_OPTIONAL" instead
-            },
-        )
-    # If there's SSL with Certificates
-    elif connection_type == "CERTIFICATE":
-        # Create the celery dict
-        redis_uri = f"redis://{username}:{password}@{host}:{port}/{db}"
-        celery_dict = dict(
-            broker_url=redis_uri,
-            result_backend=redis_uri,
-            task_ignore_result=True,
-            # Beat schedule for timing repetitive events (You can set up the schedules in here like this too instead of with the functions)
-            # "task-name" : {"task": "function", "schedule": time_in_seconds}
-            # beat_schedule={
-            #     "task-every-minute": {
-            #         "task": "auth.functions.auth_functions.removeExpiredSessions",
-            #         "schedule": datetime.timedelta(seconds=1),
-            #     }
-            # },
-            broker_use_ssl={
-                "keyfile": ssl_keyfile,
-                "certfile": ssl_certfile,
-                "ca_certs": ssl_ca_certs,
-                "cert_reqs": ssl.CERT_REQUIRED,
-            },
-        )
-    # Return the resulting dictionary
-    return celery_dict
-
-
-# Function to validate data type
-def validateData(
-    test_data: Any,
-    desired_type: Type,
-    conversion_fun: Callable[[Any], Any],
-    parameter: str,
-    logger: logging.Logger,
-) -> Tuple[bool, Any]:
-    # Check if it's the correct type, and it's not a string (because we have multiple string conversion types)
-    if isinstance(test_data, desired_type) and not isinstance(test_data, str):
-        return (True, test_data)
-    # Try to to convert the data
-    try:
-        return (True, conversion_fun(test_data))
-    except:
-        logger.warning(
-            f'Value for "{parameter}" is the incorrect type. It must be a/an {str(desired_type)}.'
-        )
-        return (False, test_data)
-
-
-# Function to try and convert to a string (uppercase specifically)
-def convertStr(test_data: Any) -> str:
-    return str(test_data).upper()
-
-
-# Function to try and convert to a bool
-def convertBool(test_data: Any) -> bool:
-    # Check if the test_data is a string
-    if isinstance(test_data, str):
-        # Make it uppercase
-        uppper_data = test_data.upper()
-        # Check it for matching
-        if uppper_data == "TRUE":
-            return True
-        elif uppper_data == "FALSE":
-            return False
-    elif isinstance(test_data, int):
-        if test_data == 1:
-            return False
-        elif test_data == 0:
-            return True
-    # If it wasn't one of the above raise an error
-    raise Exception("Invalid Parameter")
-
 
 # Function to load our credentials
 def loadCredentials(running_path: pathlib.Path) -> Config:
+    """
+    Loads the credentials into a Config Class Object from a JSON file
+
+    I may want to switch to environment variables (or .env) to make it more practical for
+    docker (or other deployment options) in the future
+
+    :param running_path: The username to check
+    :type running_path: pathlib.Path
+
+    :return: Returns a Config Class Object
+    :rtype: Config
+    """
     # Create a logger
     logger = logging.getLogger("Split_Tracker")
     logger.setLevel(logging.INFO)
@@ -336,6 +48,7 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
     # Create the path to the settings (where the main script is running then getting the directory)
     script_path = pathlib.Path(running_path).resolve().parent.resolve()
     json_path = pathlib.Path.joinpath(script_path, "config.json")
+
     # Load the file if it exists
     if pathlib.Path.exists(json_path):
         with open(json_path, "r") as file:
@@ -354,6 +67,7 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                 "CELERY_REDIS_SSL",
             ]:
                 result, new_data = validateData(value, str, convertStr, key, logger)
+
             # Strings (and paths) that need to be as they are
             elif key in [
                 "SECRET_KEY",
@@ -387,6 +101,7 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                 "CELERY_REDIS_CERT_FILE",
             ]:
                 result, new_data = validateData(value, str, str, key, logger)
+
             # booleans
             elif key in ["TESTING", "DEBUG", "FLASK_SSL"]:
                 # This could be problematic because any string that's not empty will be true and if empty it will be false
@@ -471,6 +186,22 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             sys.exit()
         # Reset the error variable
         has_error = False
+
+        # Setting the paths to be None for now because it's causing errors later on that
+        # they're being called before their assigned.
+        flask_key_path = json_obj["FLASK_KEY_FILE"]
+        flask_cert_path = json_obj["FLASK_CERT_FILE"]
+        mongo_ca_path = json_obj["MONGO_CA_FILE"]
+        mongo_ssl_path = json_obj["MONGO_SSL_FILE"]
+        postgre_ca_path = json_obj["POSTGRE_CA_FILE"]
+        postgre_key_path = json_obj["POSTGRE_KEY_FILE"]
+        postgre_cert_path = json_obj["POSTGRE_CERT_FILE"]
+        redis_ca_path = json_obj["REDIS_CA_FILE"]
+        redis_key_path = json_obj["REDIS_KEY_FILE"]
+        redis_cert_path = json_obj["REDIS_CERT_FILE"]
+        celery_redis_ca_path = json_obj["CELERY_REDIS_CA_FILE"]
+        celery_redis_key_path = json_obj["CELERY_REDIS_KEY_FILE"]
+        celery_redis_cert_path = json_obj["CELERY_REDIS_CERT_FILE"]
 
         # If any of the connections are using ssl and a certificate we'll check the paths
         if check_ssl_path:
@@ -631,11 +362,24 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
                 celery_redis_ca_path = json_obj["CELERY_REDIS_CA_FILE"]
                 celery_redis_key_path = json_obj["CELERY_REDIS_KEY_FILE"]
                 celery_redis_cert_path = json_obj["CELERY_REDIS_CERT_FILE"]
+        
         # Closing if there's an error in the configuration
         if has_error:
             sys.exit()
         # Reset the error variable
         has_error = False
+
+        postgre_connection = connectPostgre(
+                connection_type=json_obj["POSTGRE_SSL"],
+                database=json_obj["POSTGRE_DATABASE"],
+                user=json_obj["POSTGRE_USER"],
+                password=json_obj["POSTGRE_PASS"],
+                host=json_obj["POSTGRE_ADDRESS"],
+                port=json_obj["POSTGRE_PORT"],
+                sslrootcert=postgre_ca_path,
+                sslcert=postgre_cert_path,
+                sslkey=postgre_key_path,
+            )
 
         # Attempting to create the database connections
         try:
@@ -725,8 +469,8 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
             flask_host=json_obj["FLASK_HOST"],
             flask_port=json_obj["FLASK_PORT"],
             flask_ssl=json_obj["FLASK_SSL"],  #
-            flask_key_file=json_obj["FLASK_KEY_FILE"],
-            flask_cert_file=json_obj["FLASK_CERT_FILE"],
+            flask_key_file=flask_key_path,
+            flask_cert_file=flask_cert_path,
             # MongoDB
             mongo_addr=json_obj["MONGO_ADDRESS"],
             mongo_port=json_obj["MONGO_PORT"],
@@ -833,7 +577,6 @@ def loadCredentials(running_path: pathlib.Path) -> Config:
         # Maybe not the bes idea, but it is what it is
         sys.exit("Fill in the config file")
 
-
 # Footer Comment
 # History of Contributions:
-# [2024-2024] - [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio] - [The entire document]
+# [2024-2025] - [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio] - [The entire document]
