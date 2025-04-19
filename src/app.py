@@ -7,20 +7,23 @@
 # Author(s): [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Maintainer: [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio]
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
-# File Description: [The file holding the tracking module blueprint]
+# File Description: [Creates the flask and celery apps.]
 
-# Package Imports
-from flask import Blueprint
+# Import Credentials
+from stored_credentials import app_config
 
-# Create the blueprint
-tracker_bp = Blueprint(
-    "tracker",
-    __name__,
-    template_folder="templates",
-    static_folder="static",
-    static_url_path="/static/tracker",
-    url_prefix="/tracker",
-)
+# My imports
+from functions.fn_createFlaskApp import createFlaskApp
+from functions.fn_addBlueprints import addBlueprints
+
+# Create the apps
+flask_app = createFlaskApp(app_config)
+
+# If we want to use the celery app directly it's here
+# celery_app: Celery = flask_app.extensions["celery"]
+
+# Add the blueprints
+flask_app = addBlueprints(flask_app)
 
 # Footer Comment
 # History of Contributions:

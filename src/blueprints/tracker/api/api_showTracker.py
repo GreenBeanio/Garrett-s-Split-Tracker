@@ -10,7 +10,7 @@
 # File Description: [A file holding many functions used in the auth module.]
 
 # Import Credentials
-from main import app_config
+from stored_credentials import app_config
 
 # My Imports
 from tracker.bp_tracker import tracker_bp
@@ -19,15 +19,15 @@ from auth.functions.fn_getUserAuthProperBothName import getUserAuthProperBothNam
 # Package Imports
 from flask import render_template, request, redirect, url_for
 
-# Creating the specific tracked activity page
-@tracker_bp.route("/user/<string:username>/activities")
-def showTrackedActivities(username: str) -> redirect | render_template:
+# Creating the tracker page
+@tracker_bp.get("/user/<string:username>")
+def showTracker(username: str) -> render_template | redirect:
     """
     API ROUTE
-    /user/<string:username>/activities
+    /user/<string:username>
     
     GET API
-    Show a User their page of tracked activities
+    Show a User their tracker page
 
     :param username: The username to show
     :type username: str
@@ -38,8 +38,8 @@ def showTrackedActivities(username: str) -> redirect | render_template:
     )
     # If the user is logged in and is checking themselves
     if proper_status:
-        return render_template("tracked.j2", logged_in=auth_status, user=username)
-    # If they are a logged in and searching the wrong account reroute them to their main account page (can't trust that the user has the same activities)
+        return render_template("tracker.j2", logged_in=auth_status, user=username)
+    # If they are a logged in and searching the wrong account reroute them to their account (Naughty! Naughty!)
     elif auth_status:
         return render_template("tracker.j2", logged_in=auth_status, user=c_user)
     # If neither reroute them to the login page

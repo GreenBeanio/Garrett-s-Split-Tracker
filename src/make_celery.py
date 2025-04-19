@@ -10,7 +10,7 @@
 # File Description: [Used to create celery workers]
 
 # Import Credentials
-from main import app_config
+from stored_credentials import app_config
 
 # My imports
 from main import createFlaskApp

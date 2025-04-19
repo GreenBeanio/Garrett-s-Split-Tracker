@@ -10,26 +10,13 @@
 # File Description: [Creates the flask and celery apps.]
 
 # Import Credentials
-#from main import app_config
+from stored_credentials import app_config
 
-# My imports
-from functions.fn_createFlaskApp import createFlaskApp
-from functions.fn_addBlueprints import addBlueprints
-
-from functions.fn_loadCredentials import loadCredentials
-app_config = loadCredentials(__file__)  # Using the location of this main file
-
-# Create the apps
-flask_app = createFlaskApp(app_config)
-
-# If we want to use the celery app directly it's here
-# celery_app: Celery = flask_app.extensions["celery"]
-
-# Add the blueprints
-flask_app = addBlueprints(flask_app)
+# Import the Flask App
+from app import flask_app
 
 # Show the blueprint map
-print(flask_app.url_map)
+#print(flask_app.url_map)
 
 # Start the flask app
 if __name__ == "__main__":

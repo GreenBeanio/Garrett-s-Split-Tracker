@@ -10,7 +10,7 @@
 # File Description: [A file holding many functions used in the auth module.]
 
 # Import Credentials
-from main import app_config
+from stored_credentials import app_config
 
 # Package Imports
 import datetime

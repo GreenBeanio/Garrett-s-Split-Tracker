@@ -10,7 +10,7 @@
 # File Description: [The file holding the auth module blueprint]
 
 # Import Credentials
-from main import app_config
+from stored_credentials import app_config
 
 # My Imports
 from auth.bp_auth import auth_bp

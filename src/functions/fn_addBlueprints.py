@@ -12,23 +12,26 @@
 # My blueprints
 from auth.bp_auth import auth_bp
 from tracker.bp_tracker import tracker_bp
+from home.bp_home import home_bp
 
 # Package Imports
-from flask import Flask
+from flask import Flask, Blueprint
+from typing import Tuple
 
 # Add blueprints to the flask apt
-def addBlueprints(flask_app: Flask) -> Flask:
+def addBlueprints(flask_app: Tuple[Flask, Blueprint]) -> Tuple[Flask, Blueprint]:
     """
-    Add Blueprints to a Flask App
+    Add Blueprints to a Flask App (or Blueprint)
 
     :param flask_app: The Flask app
     :type flask_app: Flask
 
-    :return: The Flask with Blueprints added
+    :return: The Flask (or Blueprint) with Blueprints added
     :rtype: Flask
 
     You have to manually add all the blueprints to this function
     """
+    flask_app.register_blueprint(home_bp)
     flask_app.register_blueprint(auth_bp)
     flask_app.register_blueprint(tracker_bp)
     return flask_app
