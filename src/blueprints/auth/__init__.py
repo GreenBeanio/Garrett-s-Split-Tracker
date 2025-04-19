@@ -9,9 +9,6 @@
 # Project Description: [This project is used to track "splits" in games or activities. With the ability to display them on a livestream.]
 # File Description: [Auth Module]
 
-# test of importing script
-from .py import *
-
 """
 A Module containing the Authentication functions of the API
 """

@@ -31,11 +31,11 @@ File Description: [Generates the login page]
 {% block content %}
     <h2> Login </h2>
     <div>
-        <form method="POST" action="{{ url_for('auth.loginAttempt')}}">
+        <form name="loginForm" method="POST" action="{{ url_for('auth.loginAttempt')}}">
             <label for="user_text">Username:</label><br>
-            <input type="text" id="user_text" name="user_box"><br><br>
+            <input type="text" id="user_text" name="user_box" required><br><br>
             <label for="pass_text">Password:</label><br>
-            <input type="password" id="pass_text" name="pass_box"><br><br>
+            <input type="password" id="pass_text" name="pass_box" required><br><br>
             <label for="ip_text">Authenticate IP:</label>
             <input type="checkbox" id="ip_text" name="ip_check" value="use_ip" checked><br><br>
             <input type="submit" id="submit_but" value="Login">

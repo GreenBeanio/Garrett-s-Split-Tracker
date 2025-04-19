@@ -1,7 +1,7 @@
 /*
 Header Comment 
 Project: [Garrett's Split Tracker] [https://github.com/GreenBeanio/Garrett-s-Split-Tracker]
-Copyright: Copyright (c) [2024]-[2024] [Garrett's Split Tracker] Contributors
+Copyright: Copyright (c) [2024]-[2025] [Garrett's Split Tracker] Contributors
 Version: [0.1]
 Status: [Development]
 License: [MIT]
@@ -12,6 +12,13 @@ File Description: [JavaScript to validate the password]
 */
 
 // Function to validate the password
+/**
+ * Validates that passwords match
+ * 
+ * Uses html IDs "pass_text" and "confirm_pass_text"
+ * 
+ * @returns {boolean} If the password is validated
+ */
 function validatePassword() {
     // Get the passwords
     var password = document.getElementById("pass_text").value
@@ -33,5 +40,5 @@ console.log(y)
 /*
 Footer Comment
 History of Contributions:
-[2024-2024] - [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio] - [The entire document] 
+[2024-2025] - [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio] - [The entire document] 
 */

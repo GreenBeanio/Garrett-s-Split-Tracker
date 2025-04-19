@@ -109,7 +109,6 @@ def loginAttempt() -> redirect:
     """
     n_user = request.form["user_box"]
     n_passw = request.form["pass_box"]
-    c_passw = request.form["confirm_pass_box"]
     ip_status = request.form.get("ip_check")
     print(ip_status)
     ip_addr = request.remote_addr

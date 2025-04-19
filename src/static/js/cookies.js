@@ -1,7 +1,7 @@
 /*
 Header Comment 
 Project: [Garrett's Split Tracker] [https://github.com/GreenBeanio/Garrett-s-Split-Tracker]
-Copyright: Copyright (c) [2024]-[2024] [Garrett's Split Tracker] Contributors
+Copyright: Copyright (c) [2024]-[2025] [Garrett's Split Tracker] Contributors
 Version: [0.1]
 Status: [Development]
 License: [MIT]
@@ -11,11 +11,17 @@ Project Description: [This project is used to track "splits" in games or activit
 File Description: [JavaScript to get the cookies from a webpage]
 */
 
-
 // My JavaScript skills aren't great. I've been trying to figure out how I can
 // log out using just the cookies.
 // For now I've just gone and not used this and instead put it into readonly boxes.
 // It's really stupid, but I'm tired and it works for now.
+/**
+ * Get Cookies
+ * 
+ * Gets all of the User's cookies
+ * 
+ * @returns {Map} A map of the cookies
+ */
 function getCookies() {
     // Get cookies from the webpage
     cookies = document.cookie;
@@ -33,5 +39,5 @@ function getCookies() {
 /*
 Footer Comment
 History of Contributions:
-[2024-2024] - [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio] - [The entire document] 
+[2024-2025] - [Garrett Johnson (GreenBeanio) - https://github.com/greenbeanio] - [The entire document] 
 */
