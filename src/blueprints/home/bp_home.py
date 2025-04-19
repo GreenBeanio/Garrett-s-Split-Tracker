@@ -13,26 +13,30 @@
 from stored_credentials import app_config
 
 # My imports
-from auth.functions.fn_getUserAuthCookiesStatus import getUserAuthCookiesStatus
+from blueprints.auth.py.fn_getUserAuthCookiesStatus import getUserAuthCookiesStatus
 
 # Package Imports
 from flask import Blueprint, request, render_template
 
 # Create the blueprint
 home_bp = Blueprint(
-    "home",
-    __name__,
-    template_folder="templates",
-    static_folder="static",
-    static_url_path="/static/",
-    url_prefix="/",
-    # subdomain="",
+    "home", # Set the name to call from Flask
+    __name__, # Set the module name for local flask resources or something like that
+    template_folder="templates", # This uses a templates folder in the same directory as the module
+    # you could also use "../../templates/home" to use a subdirectory in the base templates directory, 
+    # but I don't want to do that right now
+    static_folder="static", # Separate static folder for the blueprint
+    static_url_path="/static/home", # Set the url path for the static files
+    url_prefix="/", # Set the URL prefix (empty because it's home)
+    # subdomain="", # Don't believe I want a subdomain
 )
+
+# Tests the path
+#print(home_bp.root_path)
 
 # Creating the main index route (Don't know if I want to put this into a blueprint or just leave it here)
 @home_bp.get("/")
 def index() -> render_template:
-    print("hi")
     """
     API ROUTE
     /

@@ -14,7 +14,7 @@ from stored_credentials import app_config
 
 # My imports
 from main import createFlaskApp
-from functions import setupPeriodic   
+from py import setupPeriodic   
 
 # Imports
 from celery import Celery
@@ -32,7 +32,7 @@ setupPeriodic(celery_app)
 # # Test out a celery task (Shit still doesn't work!)
 # @shared_task(
 #     ignore_result=False
-# )  # , name="auth.functions.auth_functions.removeExpiredSessions"
+# )  # , name="auth.py.auth_functions.removeExpiredSessions"
 # def checkSessions(x) -> str:
 #     return x
 

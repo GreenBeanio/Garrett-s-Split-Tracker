@@ -10,7 +10,7 @@
 # File Description: [Stores the credentials for other modules to call on]
 
 # My imports
-from functions.fn_loadCredentials import loadCredentials
+from py.fn_loadCredentials import loadCredentials
 
 # My hope is that by storing this file separate I can use it to store this variable in memory and call it from other modules.
 # I have no idea if it actually works that way or if it's just going to call the function every time. Hopefully it stores it in memory.

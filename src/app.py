@@ -13,8 +13,8 @@
 from stored_credentials import app_config
 
 # My imports
-from functions.fn_createFlaskApp import createFlaskApp
-from functions.fn_addBlueprints import addBlueprints
+from py.fn_createFlaskApp import createFlaskApp
+from py.fn_addBlueprints import addBlueprints
 
 # Create the apps
 flask_app = createFlaskApp(app_config)

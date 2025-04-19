@@ -15,8 +15,8 @@ from stored_credentials import app_config
 # Import the Flask App
 from app import flask_app
 
-# Show the blueprint map
-#print(flask_app.url_map)
+# Show the blueprint (URL in general) map
+# print(flask_app.url_map)
 
 # Start the flask app
 if __name__ == "__main__":
