@@ -30,7 +30,7 @@ File Description: [Generates the page for creating a new user]
     {{ super() }}
 {% endblock %}
 {%block js %}
-    <script src="{{url_for('auth.static', filename='js/password.js') }}"></script>
+    <script src="{{url_for('auth.static', filename='js/fn_validatePassword.js') }}"></script>
 {% endblock %}
 
 {% block title %}
@@ -38,6 +38,10 @@ File Description: [Generates the page for creating a new user]
 {% endblock %}
 
 {% block navigation_bar %}
+    {{ super() }}
+{% endblock %}
+
+{% block flash%}
     {{ super() }}
 {% endblock %}
 
@@ -53,7 +57,7 @@ File Description: [Generates the page for creating a new user]
             <input type="password" id="pass_text" name="pass_box" pattern="^(?=.*[0-9].*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*_\-+.?]).{16,32}$"><br><br>
             <label for="confirm_pass_text">Confirm Password:</label><br>
             <input type="password" id="confirm_pass_text" name="confirm_pass_box" pattern="^(?=.*[0-9].*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*_\-+.?]).{16,32}$"><br><br>
-            <input type="submit" id="submit_but" value="Login">
+            <input type="submit" id="submit_but" value="Create User">
             <input type="reset" id="reset_but" value="Reset">
         </form>
     </div>
@@ -83,7 +87,6 @@ File Description: [Generates the page for creating a new user]
             <li>.</li>
             <li>?</li>
         </ul>
-        
 {% endblock %}
 
 {% block footer %}

@@ -64,8 +64,28 @@ File Description: [Generates the login page]
         {# Show the xxx tabs #}
     </div>
     {% endblock %}
-    {% block content%}
+
+    {% block flash %}
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div id="flash" class="centered-text">
+                    <a>Messages:</a>
+                    <ul class=flashes>
+                    {% for message in messages %}
+                        <li>{{message}}</li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        {% endwith %}
     {% endblock %}
+
+    {# Not sure if I actually want to put this around the content #}
+    <div id="content">
+    {% block content %}
+    {% endblock %}
+    </div>
+    
     <div id="footer">
         {% block footer %}
         Copyright 2024 by Garrett Johnson (GreenBeanio) <a href="https://github.com/GreenBeanio/Garrett-s-Split-Tracker">Source Code</a>

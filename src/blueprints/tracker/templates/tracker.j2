@@ -16,9 +16,11 @@ File Description: [Generates the main tracking page]
 {%block css %}
     {{ super() }}
 {% endblock %}
+
 {%block js %}
-    {{ super() }}
+    {{ super() }}    
 {% endblock %}
+<script type="module" src="{{url_for('static', filename='js/tableHandler/main.js')}}"></script>
 
 {% block title %}
    User
@@ -28,9 +30,25 @@ File Description: [Generates the main tracking page]
     {{ super() }}
 {% endblock %}
 
+{% block flash%}
+    {{ super() }}
+{% endblock %}
+
 {% block content %}
+    <script type="text/javascript">
+        function test() {
+            const testx = document.createElement("a");
+            testx.textContent = "Test";
+            document.body.appendChild(testx);
+        }
+    </script>
+
     <h1>Hello {{user}}</h1>
     <p> It's time to track! </p>
+    <button id="test" onClick="test()">Hi</button>
+    
+    
+    
 {% endblock %}
 
 {% block footer %}

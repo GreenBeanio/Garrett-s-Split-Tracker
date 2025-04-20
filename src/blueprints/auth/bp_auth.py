@@ -71,7 +71,7 @@ def createAttempt() -> redirect:
         return user_redirect
     else:
         flash("User already exists")
-        return redirect(url_for("index"))
+        return redirect(url_for("home.index"))
     
 # Creating an interactive account creations page
 @auth_bp.get("/new-user")
@@ -95,7 +95,7 @@ def newUser() -> Union[redirect, make_response]:
         return user_render
     else:
         flash("You're already logged in")
-        return redirect(url_for("index"))
+        return redirect(url_for("home.index"))
     
 # Handling login attempts very crudely
 @auth_bp.post("/login-attempt")
@@ -228,7 +228,7 @@ def showLogin() -> Union[redirect, make_response]:
     # If they are already logged in
     else:
         flash("You're already logged in")
-        return redirect(url_for("index"))
+        return redirect(url_for("home.index"))
 
 # Footer Comment
 # History of Contributions:

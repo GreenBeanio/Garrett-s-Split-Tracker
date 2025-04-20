@@ -11,9 +11,36 @@ Project Description: [This project is used to track "splits" in games or activit
 File Description: [The main CSS]
 */
 
-/* For the navigation bar object */
+/****************** General ******************/
+
+/* A class to center text */
+.centered-text {
+    text-align: center;
+}
+
+/****************** HTML ******************/
+
+html {
+    background-color: #E0E1E9;
+}
+
+/****************** Head ******************/
+
+head {
+    background-color: #E0E1E9;
+}
+
+/****************** Body ******************/
+
+body {
+    background-color: #E0E1E9;
+}
+
+/****************** Navigation Bar ******************/
+
+/* Navigation Bar Header - No Items */
 #navigation-bar {
-    background-color: royalblue;
+    background-color: #DDFDFE;
     position: relative;
     display: flex;
     width: 100%;
@@ -24,10 +51,21 @@ File Description: [The main CSS]
     align-items: center;
 }
 
-/* For the navigation bar object hyperlink*/
+/* Navigation Bar Header - With Items */
+.a-dropdown {
+    background-color: #DDFDFE;
+    text-align: center;
+    text-decoration: none;
+    font-size: 17px;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+/* Navigation Bar Text */
 #navigation-bar a {
     float: inline-start;
-    color: lightblue;
+    color: #475454;
     text-align: center;
     padding: 10px 10px;
     margin: 0px;
@@ -35,43 +73,20 @@ File Description: [The main CSS]
     font-size: 17px;
 }
 
+/* Navigation Bar Hover - Header */
 #navigation-bar a:hover {
-    background-color: red;
-    color: black;
+    background-color: #9cccd6;
+    color: #292f30;
+    text-decoration: underline;
 }
 
-/* For the id footer object */
-#footer {
-    color: black;
-    font: 12px;
-    text-align: center;
-    /*vertical-align: bottom;*/
-    position: fixed;
-    left: 0%;
-    bottom: 0%;
-    height: min-content;
-    width: 100%;
-    background-color: beige;
+/* Navigation Bar Hover - Items */
+.dropdown:hover .a-dropdown {
+    background-color: #dcf7f7;
+    color: #292f30;
 }
 
-/* For hyperlinks in the footer object */
-#footer a {
-    color: darkblue;
-    text-align: center;
-    padding: 5px 5px;
-    text-decoration: none;
-}
-
-#footer a:hover {
-    color: blue;
-}
-
-/* A class to center text */
-.centered-text {
-    text-align: center;
-}
-
-/* For creating a dropdown list */
+/* Navigation Drop Down Bar Items - Div */
 .dropdown {
     position: relative;
     display: flex;
@@ -84,31 +99,17 @@ File Description: [The main CSS]
     padding: 0%;
 }
 
-.a-dropdown {
-    background-color: royalblue;
-    color: lightblue;
-    text-align: center;
-    text-decoration: none;
-    font-size: 17px;
-    width: 100%;
-    height: 100%;
-    cursor: pointer;
-}
-
+/* Navigation Drop Down Items - Not Hovered */
 .dropdown-items {
     display: none;
     position: absolute;
-    background-color: maroon;
+    background-color: #aed0d1;
     z-index: 1;
     width: fit-content;
     height: fit-content
 }
 
-.dropdown:hover .a-dropdown {
-    background-color: blanchedalmond;
-    color: black;
-}
-
+/* Navigation Bar Dropdown Items - Hovered*/
 .dropdown:hover .dropdown-items {
     display: flex;
     flex-direction: column;
@@ -119,16 +120,63 @@ File Description: [The main CSS]
     /* Sadly I can't get this flush without using margins */
 }
 
+/* Navigation Bar Dropdown Items - Text*/
 .dropdown-items a {
-    color: black;
     text-decoration: none;
     display: flex;
     justify-content: center;
 }
 
-.dropdown-items a:hover {
-    background-color: red;
-    color: black;
+/****************** Footer ******************/
+
+/* Footer Main */
+#footer {
+    color: #453439;
+    font: 12px;
+    text-align: center;
+    /*vertical-align: bottom;*/
+    position: fixed;
+    left: 0%;
+    bottom: 0%;
+    height: min-content;
+    width: 100%;
+    background-color: #E7CEE3;
+}
+
+/* Footer Hyperlink Text */
+#footer a {
+    color: #ba1c4a;
+    text-align: center;
+    padding: 5px 5px;
+    text-decoration: none;
+}
+
+/* Footer Hyperlink Hover Text */
+#footer a:hover {
+    color: #e8094a;
+    text-decoration: underline;
+}
+
+/****************** Flash ******************/
+
+/* Flash Box */
+#flash {
+    border: 1px solid black;
+    padding: 1%;
+    margin: 1%;
+    text-wrap: wrap;
+    background-color: #E0E1E9;
+}
+
+/* Flash Center List */
+.flashes {
+    list-style-position: inside;
+}
+
+/****************** Content ******************/
+
+#content {
+    background-color: #E0E1E9;
 }
 
 

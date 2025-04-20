@@ -28,6 +28,10 @@ File Description: [Generates the main tracking page]
     {{ super() }}
 {% endblock %}
 
+{% block flash%}
+    {{ super() }}
+{% endblock %}
+
 {% block content %}
     <h1>Hello {{user}}</h1>
     <p> This is your awesome tracking information for your activities </p>
