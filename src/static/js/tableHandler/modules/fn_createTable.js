@@ -20,21 +20,28 @@ import { createRow } from "./fn_createRow.js";
  * 
  * Creates a HTML table from a DataTable object
  * @param {DataTable} dt The DataTable to get the data from 
- * @param {string} id The id to assign the table (Default: null)
+ * @param {string} id The id to assign the table (Default: "data_table")
  * @param {string} table_class The id to assign the table (Default: "table")
  * @param {string} body_class The id to assign the table (Default: "table-body")
  * 
- * @returns Nothing? Just modify a table
+ * @returns An html table from a DataTable, or null if the id is null or already exists
  * 
  */
-function createTable(dt, id = null, table_class = "table", body_class = "table-body") {
+function createTable(dt, id = "data_table", table_class = "table", body_class = "table-body") {
+    // Check that the id doesn't exist
+    if (id == null || document.getElementById(id) != null) {
+        return (null)
+    }
     // Create a table element and body
     const tbl = document.createElement("table");
     tbl.className = table_class;
+    tbl.id = `${id}`;
     const tbl_body = document.createElement("tbody");
     tbl_body.className = body_class;
+    tbl_body.id = `${id}_body`;
     // Add the header row
-    tbl_body.appendChild(createRow(dt.col_header, dt.col_headers, true, "table-row-col-header", "table-col-header"));
+    tbl_body.appendChild(createRow(dt.col_header, dt.col_headers, dt.col_header, dt.col_headers, id, true,
+        "table-row-col-header", "table-col-header", "table-input-header"));
     // Check if row_headers isn't null and if it is create an array to read from
     // (this creates a duplicate of the data. RIP RAM, but it's just 1 array shouldn't be an issue)
     let use_headers = [dt.row_data.length];
@@ -46,14 +53,10 @@ function createTable(dt, id = null, table_class = "table", body_class = "table-b
     }
     // Add the data rows
     for (let i = 0; i < dt.row_data.length; i++) {
-        tbl_body.appendChild(createRow(use_headers[i], dt.row_data[i]));
+        tbl_body.appendChild(createRow(use_headers[i], dt.row_data[i], dt.col_header, dt.col_headers, id));
     }
     // Add the body to the table
     tbl.appendChild(tbl_body);
-    // Add an id if one is passed and it doesn't already exist
-    if (id != null && document.getElementById(id) == null) {
-        tbl.id = id;
-    }
     // Return the table
     return (tbl);
 }

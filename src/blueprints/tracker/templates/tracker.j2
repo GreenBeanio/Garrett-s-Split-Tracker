@@ -47,7 +47,9 @@ File Description: [Generates the main tracking page]
             // test
             x = new DataTable([[1, 1, 1, 1],[2,2,2,2],[3,3,3,3]], ["Time", "Date", "Example", "Yas"], null);
             y = createTable(x, "data-table");
-            document.body.appendChild(y);
+            if(y != null) {
+                document.body.appendChild(y);
+            }
         }
     </script>
 
