@@ -13,14 +13,21 @@ File Description: [Generates the main tracking page]
 
 {% extends "base.j2" %}
 
-{%block css %}
+{%block base_css %}
     {{ super() }}
 {% endblock %}
 
-{%block js %}
+{%block extra_css %}
+    {{ super() }}
+{% endblock %}
+
+{%block base_js %}
     {{ super() }}    
 {% endblock %}
-<script type="module" src="{{url_for('static', filename='js/tableHandler/main.js')}}"></script>
+
+{%block extra_js %}
+    <script type="module" src="{{url_for('static', filename='js/tableHandler/main.js')}}"></script> 
+{% endblock %}
 
 {% block title %}
    User
@@ -37,9 +44,10 @@ File Description: [Generates the main tracking page]
 {% block content %}
     <script type="text/javascript">
         function test() {
-            const testx = document.createElement("a");
-            testx.textContent = "Test";
-            document.body.appendChild(testx);
+            // test
+            x = new DataTable([[1, 1, 1, 1],[2,2,2,2],[3,3,3,3]], ["Time", "Date", "Example", "Yas"], null);
+            y = createTable(x, "data-table");
+            document.body.appendChild(y);
         }
     </script>
 

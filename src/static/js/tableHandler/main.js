@@ -19,6 +19,11 @@ import { DataTable } from './modules/cl_DataTable.js';
 import { createTable } from './modules/fn_createTable.js';
 import { createRow } from './modules/fn_createRow.js';
 
+// MDN Docs led me astray and didn't tell me I had to do this in the import script to use them in HTML non-modules
+window.DataTable = DataTable;
+window.createTable = createTable;
+window.createRow = createRow;
+
 /*
 Footer Comment
 History of Contributions:

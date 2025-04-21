@@ -13,11 +13,20 @@ File Description: [Generates the user's page]
 
 {% extends "base.j2" %}
 
-{%block css %}
+{%block base_css %}
     {{ super() }}
 {% endblock %}
-{%block js %}
+
+{%block extra_css %}
     {{ super() }}
+{% endblock %}
+
+{%block base_js %}
+    {{ super() }}    
+{% endblock %}
+
+{%block extra_js %}
+    {{ super() }}    
 {% endblock %}
 
 {% block title %}

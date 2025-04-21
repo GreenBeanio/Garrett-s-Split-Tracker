@@ -26,11 +26,22 @@ File Description: [Generates the page for creating a new user]
 
 {% extends "base.j2" %}
 
-{%block css %}
+{%block base_css %}
     {{ super() }}
 {% endblock %}
-{%block js %}
-    <script src="{{url_for('auth.static', filename='js/fn_validatePassword.js') }}"></script>
+
+{%block extra_css %}
+    {{ super() }}
+{% endblock %}
+
+{%block base_js %}
+    {{ super() }}    
+{% endblock %}
+
+{%block extra_js %}
+    <script src="{{url_for('auth.static', filename='js/fn_validatePassword.js') }}"></script>  
+{% endblock %}
+    
 {% endblock %}
 
 {% block title %}
