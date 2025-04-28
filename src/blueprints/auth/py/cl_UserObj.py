@@ -11,6 +11,16 @@
 
 # test class just to store users
 class UserObj:
+    """
+    Class to store a User
+
+    :param username: The username
+    :type username: str
+    :param hash_pass: The hashed password of the user
+    :type hash_pass: str
+    :param salt: The salt used to hash the password
+    :type salt: str
+    """
     def __init__(self, username: str, hash_pass: str, salt: str):
         self.username = username
         self.hash_pass = hash_pass

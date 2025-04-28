@@ -14,6 +14,7 @@ from stored_credentials import app_config
 
 # My Imports
 from blueprints.auth.py.fn_getUserAuthProperBothName import getUserAuthProperBothName
+from blueprints.tracker.py.fn_getUserGames import getUserGames
 
 # Package Imports
 from flask import Blueprint, request, redirect, url_for, render_template
@@ -94,6 +95,38 @@ def showTracker(username: str) -> Union[render_template, redirect]:
         user_redirect.delete_cookie("user")
         user_redirect.delete_cookie("auth")
         return user_redirect
+
+# Creating the tracker page
+@tracker_bp.get("/games/get/<string:username>")
+def getGames(username: str) -> str:
+    """
+    API ROUTE
+    /games/get/<string:username>
+    
+    GET API
+    Get the unique games for a user
+
+    :param username: The username to show
+    :type username: str
+
+    :return: Jsonified unique games for the user
+    :rtype: str
+    """
+    # Get information about if the user is logged in and is querying the right user
+    auth_status, proper_status, c_user = getUserAuthProperBothName(
+        request, app_config, username
+    )
+    # If the user is logged in and searching themselves
+    if proper_status:
+        results = getUserGames(username, app_config)
+        return(results)
+    # If they are a logged in and searching the wrong account
+    elif auth_status:
+        results = getUserGames(c_user, app_config)
+        return(results)
+    # If neither return None
+    else:
+        return None
 
 # Footer Comment
 # History of Contributions:
